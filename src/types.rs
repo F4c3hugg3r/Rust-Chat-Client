@@ -1,31 +1,3 @@
-// reqwest for asynchronous http requests
-// serde for json serializing
-// tokio for conurrency
-
-// Beipsiel Post Req
-// #[derive(Serialize)]
-// struct MyStruct {
-//     field: String,
-// }
-
-// let client = reqwest::Client::new();
-// let res = client.post("https://example.com")
-//     .json(&my_struct) // encodiert als JSON
-//     .send()
-//     .await?;
-
-// Beispiel Get Req
-// #[derive(Deserialize)]
-// struct MyStruct {
-//     field: String,
-// }
-
-// let res = client.get("https://example.com")
-//     .send()
-//     .await?
-//     .json::<MyStruct>() // decodiert JSON zu Struct
-//     .await?;
-
 use serde::{Deserialize, Serialize};
 
 // routes

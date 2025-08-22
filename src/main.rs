@@ -1,3 +1,4 @@
+mod chat;
 mod helper;
 mod network;
 mod types;

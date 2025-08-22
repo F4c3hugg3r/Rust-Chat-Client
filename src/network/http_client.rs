@@ -1,7 +1,63 @@
-use crate::network::client::Client;
+use crate::chat::chat_client::ChatClient;
+use crate::helper;
 use crate::types;
+use crate::types::{Message, Response};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::{Mutex, Notify};
 
-impl Client {
+// HttpClient handles all network related tasks
+pub struct HttpClient {
+    url: String,
+    http_client: reqwest::Client,
+    pub endpoints: HashMap<types::Route, String>,
+    auth_token: Arc<Mutex<String>>,
+}
+
+impl HttpClient {
+    pub fn new_client(
+        server_url: String,
+        auth_token: Arc<Mutex<String>>,
+        client_id: Arc<Mutex<String>>,
+    ) -> HttpClient {
+        let mut client = HttpClient {
+            url: server_url.clone(),
+            http_client: reqwest::Client::new(),
+            endpoints: HashMap::new(),
+            auth_token,
+        };
+
+        client.register_endpoints(server_url, client_id);
+
+        client
+    }
+
+    // RegisterEndpoints registeres endpoint urls to the corresponding enum values
+    async fn register_endpoints(&mut self, url: String, client_id: Arc<Mutex<String>>) {
+        let client_id = client_id.lock().await.clone();
+        self.endpoints.insert(
+            types::Route::PostRegister,
+            format!("{}/users/{}", &url, client_id),
+        );
+        self.endpoints.insert(
+            types::Route::PostPlugin,
+            format!("{}/users/{}/run", &url, client_id),
+        );
+        self.endpoints.insert(
+            types::Route::Delete,
+            format!("{}/users/{}", &url, client_id),
+        );
+        self.endpoints.insert(
+            types::Route::Get,
+            format!("{}/users/{}/chat", &url, client_id),
+        );
+        self.endpoints.insert(
+            types::Route::SignalWebRTC,
+            format!("{}/users/{}/signal", &url, client_id),
+        );
+    }
+
     // GetRequest sends a GET Request to the server including the authorization token
     pub async fn get_request(&self, url: &String) -> Result<types::Response, reqwest::Error> {
         // FIXME client registered testen
