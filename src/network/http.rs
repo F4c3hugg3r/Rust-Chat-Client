@@ -1,15 +1,19 @@
 use crate::network::client::Client;
+use crate::types;
 
-impl<'a> Client<'a> {
+impl Client {
     // GetRequest sends a GET Request to the server including the authorization token
-    pub async fn get_request(&self, url: &String) -> Result<reqwest::Response, reqwest::Error> {
-        // FIXME auf das auth_token darf nur mit lock zugegriffen werden und client registered testen
+    pub async fn get_request(&self, url: &String) -> Result<types::Response, reqwest::Error> {
+        // FIXME client registered testen
 
-        let echo_json = self
+        let auth_token = self.auth_token.lock().await.clone();
+        let echo_json: types::Response = self
             .http_client
             .get(url)
-            .header("Authorization", &self.auth_token)
+            .header("Authorization", auth_token)
             .send()
+            .await?
+            .json()
             .await?;
         Ok(echo_json)
     }
@@ -20,16 +24,17 @@ impl<'a> Client<'a> {
         &self,
         url: &String,
         body: String,
-    ) -> Result<reqwest::Response, reqwest::Error> {
-        // FIXME auf das auth_token darf nur mit lock zugegriffen werden
-
-        let echo_json = self
+    ) -> Result<types::Response, reqwest::Error> {
+        let auth_token: String = self.auth_token.lock().await.clone();
+        let echo_json: types::Response = self
             .http_client
             .delete(url)
-            .header("Authorization", &self.auth_token)
+            .header("Authorization", auth_token)
             .header("Content-Type", "application/json")
             .body(body)
             .send()
+            .await?
+            .json()
             .await?;
         Ok(echo_json)
     }
@@ -40,16 +45,17 @@ impl<'a> Client<'a> {
         &self,
         url: &String,
         body: String,
-    ) -> Result<reqwest::Response, reqwest::Error> {
-        // FIXME auf das auth_token darf nur mit lock zugegriffen werden
-
-        let echo_json = self
+    ) -> Result<types::Response, reqwest::Error> {
+        let auth_token: String = self.auth_token.lock().await.clone();
+        let echo_json: types::Response = self
             .http_client
             .post(url)
-            .header("Authorization", &self.auth_token)
+            .header("Authorization", auth_token)
             .header("Content-Type", "application/json")
             .body(body)
             .send()
+            .await?
+            .json()
             .await?;
         Ok(echo_json)
     }
