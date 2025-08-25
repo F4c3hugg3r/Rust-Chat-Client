@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 // routes
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Route {
+pub enum Endpoint {
     PostPlugin,
     PostRegister,
     Delete,
@@ -10,35 +11,61 @@ pub enum Route {
     SignalWebRTC,
 }
 
+#[derive(Error, Debug)]
+pub enum ChatError {
+    #[error("A message field is empty")]
+    EmptyField { msg: String },
+    #[error("You have no permission")]
+    NoPermission { msg: String },
+    #[error("Item is not available")]
+    NotAvailable { msg: String },
+    #[error("Timeout has been reached")]
+    TimeoutReached { msg: String },
+    #[error("Your input was invalid")]
+    WrongInput { msg: String },
+}
+
+// #[derive(Error, Debug)]
+// pub enum CustomError {
+//     #[error("A message field is empty")]
+//     EmptyMessageField,
+// }
+
+#[derive(Error, Debug)]
+pub enum HttpClientError {
+    #[error("This endpoint is invalid")]
+    InvalidEndpoint,
+}
+
 // muteable device
-const MICROPHONE: &str = "Mic";
-const SPEAKER: &str = "Speaker";
+pub const MICROPHONE: &str = "Mic";
+pub const SPEAKER: &str = "Speaker";
 
-const UNREGISTER_FLAG: &str = "- Du bist nun vom Server getrennt -";
-const REGISTER_FLAG: &str = "- Du bist registriert -";
-const ADD_GROUP_FLAG: &str = "Add Group";
-const LEAVE_GROUP_FLAG: &str = "Leave Group";
+pub const UNREGISTER_FLAG: &str = "- Du bist nun vom Server getrennt -";
+pub const REGISTER_FLAG: &str = "- Du bist registriert -";
+pub const ADD_GROUP_FLAG: &str = "Add Group";
+pub const LEAVE_GROUP_FLAG: &str = "Leave Group";
 
-const USERS_FLAG: &str = "Users";
-const IGNORE_RESPONSE_TAG: &str = "Ignore Response";
-const USER_ADD_FLAG: &str = "Add User";
-const USER_REMOVE_FLAG: &str = "Remove User";
+pub const USERS_FLAG: &str = "Users";
+pub const IGNORE_RESPONSE_TAG: &str = "Ignore Response";
+pub const USER_ADD_FLAG: &str = "Add User";
+pub const USER_REMOVE_FLAG: &str = "Remove User";
 
 // signal flags
-const ICE_CANDIDATE_FLAG: &str = "ICE Candidate";
-const ROLLBACK_DONE_FLAG: &str = "Rollback Done";
-const INITIALIZE_SIGNAL_FLAG: &str = "Initialize Call";
-const CALL_ACCEPTED: &str = "Call Accepted";
-const CALL_DENIED: &str = "Call denied";
-const RECEIVE_CALL: &str = "ReceiveCall";
+pub const ICE_CANDIDATE_FLAG: &str = "ICE Candidate";
+pub const ROLLBACK_DONE_FLAG: &str = "Rollback Done";
+pub const INITIALIZE_SIGNAL_FLAG: &str = "Initialize Call";
+pub const CALL_ACCEPTED: &str = "Call Accepted";
+pub const CALL_DENIED: &str = "Call denied";
+pub const RECEIVE_CALL: &str = "ReceiveCall";
 
 // signalflags -> callStates
-const OFFER_SIGNAL_FLAG: &str = "Offer Signal";
-const ANSWER_SIGNAL_FLAG: &str = "Answer Signal";
-const STABLE_SIGNAL_FLAG: &str = "Stable Flag";
-const CONNECTED_FLAG: &str = "Connected";
-const FAILED_CONNECTION_FLAG: &str = "Connection Failed";
-const NO_CALL_FLAG: &str = "No Call";
+pub const OFFER_SIGNAL_FLAG: &str = "Offer Signal";
+pub const ANSWER_SIGNAL_FLAG: &str = "Answer Signal";
+pub const STABLE_SIGNAL_FLAG: &str = "Stable Flag";
+pub const CONNECTED_FLAG: &str = "Connected";
+pub const FAILED_CONNECTION_FLAG: &str = "Connection Failed";
+pub const NO_CALL_FLAG: &str = "No Call";
 
 // Message contains the name and id of the requester and the message (content) itsself
 // as well as the uses plugin and groupId if a user is in a group

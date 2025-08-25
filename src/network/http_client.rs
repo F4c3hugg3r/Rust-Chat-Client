@@ -1,8 +1,9 @@
 use crate::chat::chat_client::ChatClient;
 use crate::helper;
 use crate::types;
-use crate::types::{Message, Response};
+use crate::types::{HttpClientError, Message, Response};
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Mutex, Notify};
@@ -11,7 +12,7 @@ use tokio::sync::{Mutex, Notify};
 pub struct HttpClient {
     url: String,
     http_client: reqwest::Client,
-    pub endpoints: HashMap<types::Route, String>,
+    pub endpoints: HashMap<types::Endpoint, String>,
     auth_token: Arc<Mutex<String>>,
 }
 
@@ -37,35 +38,43 @@ impl HttpClient {
     async fn register_endpoints(&mut self, url: String, client_id: Arc<Mutex<String>>) {
         let client_id = client_id.lock().await.clone();
         self.endpoints.insert(
-            types::Route::PostRegister,
+            types::Endpoint::PostRegister,
             format!("{}/users/{}", &url, client_id),
         );
         self.endpoints.insert(
-            types::Route::PostPlugin,
+            types::Endpoint::PostPlugin,
             format!("{}/users/{}/run", &url, client_id),
         );
         self.endpoints.insert(
-            types::Route::Delete,
+            types::Endpoint::Delete,
             format!("{}/users/{}", &url, client_id),
         );
         self.endpoints.insert(
-            types::Route::Get,
+            types::Endpoint::Get,
             format!("{}/users/{}/chat", &url, client_id),
         );
         self.endpoints.insert(
-            types::Route::SignalWebRTC,
+            types::Endpoint::SignalWebRTC,
             format!("{}/users/{}/signal", &url, client_id),
         );
     }
 
     // GetRequest sends a GET Request to the server including the authorization token
-    pub async fn get_request(&self, url: &String) -> Result<types::Response, reqwest::Error> {
-        // FIXME client registered testen
+    pub async fn get_response(
+        &self,
+        endpoint: types::Endpoint,
+    ) -> Result<types::Response, Box<dyn Error>> {
+        // FIXME client registered testen in response poller
 
+        let endpoint_url = match self.endpoints.get(&endpoint) {
+            Some(e) => e,
+            None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
+        };
         let auth_token = self.auth_token.lock().await.clone();
+
         let echo_json: types::Response = self
             .http_client
-            .get(url)
+            .get(endpoint_url)
             .header("Authorization", auth_token)
             .send()
             .await?
@@ -78,13 +87,20 @@ impl HttpClient {
     // including the authorization token
     pub async fn delete_request(
         &self,
-        url: &String,
-        body: String,
-    ) -> Result<types::Response, reqwest::Error> {
+        endpoint: types::Endpoint,
+        msg: Message,
+    ) -> Result<types::Response, Box<dyn Error>> {
+        let body = serde_json::to_string(&msg)?;
+        let endpoint_url = match self.endpoints.get(&endpoint) {
+            Some(e) => e,
+            None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
+        };
+
         let auth_token: String = self.auth_token.lock().await.clone();
+
         let echo_json: types::Response = self
             .http_client
-            .delete(url)
+            .delete(endpoint_url)
             .header("Authorization", auth_token)
             .header("Content-Type", "application/json")
             .body(body)
@@ -97,15 +113,21 @@ impl HttpClient {
 
     // PostReqeust sends a Post Request to send a message to the server
     // including the authorization token
-    pub async fn post_request(
+    pub async fn post_message(
         &self,
-        url: &String,
-        body: String,
-    ) -> Result<types::Response, reqwest::Error> {
+        endpoint: types::Endpoint,
+        msg: Message,
+    ) -> Result<types::Response, Box<dyn Error>> {
+        let body = serde_json::to_string(&msg)?;
+        let endpoint_url = match self.endpoints.get(&endpoint) {
+            Some(e) => e,
+            None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
+        };
         let auth_token: String = self.auth_token.lock().await.clone();
+
         let echo_json: types::Response = self
             .http_client
-            .post(url)
+            .post(endpoint_url)
             .header("Authorization", auth_token)
             .header("Content-Type", "application/json")
             .body(body)

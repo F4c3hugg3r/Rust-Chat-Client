@@ -1,7 +1,7 @@
 use crate::helper;
 use crate::network::http_client::HttpClient;
 use crate::types;
-use crate::types::{Message, Response};
+use crate::types::{Endpoint, Message, Response};
 use crate::{chat::chat_client::ChatClient, network::http_client};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -40,12 +40,11 @@ impl ChatClient {
         }
     }
 
-    // -> service
     pub async fn response_receiver(&self, url: &String) {
         loop {
             self.check_registered().await;
 
-            match self.http_client.get_request(url).await {
+            match self.http_client.get_response(Endpoint::Get).await {
                 Ok(rsp) => {
                     let _ = self.output.send(rsp).await;
                 }
@@ -78,8 +77,4 @@ impl ChatClient {
         )
         .await
     }
-
-    // TODO Executor
-
-    // TODO Interrupt in service
 }

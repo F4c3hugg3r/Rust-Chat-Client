@@ -14,10 +14,10 @@ pub struct ChatClient {
     pub auth_token: Arc<Mutex<String>>,
     // group_id: String,
     pub registered: Arc<Mutex<bool>>,
+    pub output: Sender<Response>,
     pub http_client: HttpClient,
     // pub current_calling: String,
     notify: Notify,
-    pub output: Sender<Response>,
     // TODO channel für output und tx (sender) könne mehrere sein / rx (receiver) (gibt nur einen receiver)
     //  channel wird außerhalb initialisiert: überlegen wie am besten
     // pub output: mpsc::Sender<types::Response>
@@ -49,7 +49,7 @@ impl ChatClient {
         client
     }
 
-    async fn register(&self, rsp: types::Response, new_id: String) {
+    pub async fn register(&self, rsp: types::Response, new_id: String) {
         let mut client_name = self.client_name.lock().await;
         let mut auth_token = self.auth_token.lock().await;
         let mut client_id = self.client_id.lock().await;
@@ -63,7 +63,7 @@ impl ChatClient {
         self.notify.notify_waiters();
     }
 
-    async fn unregister(&self) {
+    pub async fn unregister(&self) {
         let mut client_name = self.client_name.lock().await;
         let mut auth_token = self.auth_token.lock().await;
         let mut client_id = self.client_id.lock().await;

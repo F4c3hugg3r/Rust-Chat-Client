@@ -1,2 +1,2 @@
 pub mod chat_client;
-pub mod service;
+pub mod chat_service;
