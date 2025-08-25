@@ -1,5 +1,6 @@
+use crate::chat::{self};
 use crate::helper::generate_secure_token;
-use crate::types::{self, ChatError, Endpoint, Response};
+use crate::types::{self, ChatError, Endpoint, REGISTER_FLAG, Response, UNREGISTER_FLAG};
 use crate::{chat::chat_client::ChatClient, plugins::plugin_registry::PluginTrait, types::Message};
 use async_trait::async_trait;
 use std::error::Error;
@@ -20,9 +21,31 @@ impl PrivateMessagePlugin {
 #[async_trait]
 impl PluginTrait for PrivateMessagePlugin {
     async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error>> {
-        return Err(Box::new(ChatError::WrongInput {
-            msg: String::from("TODO"),
-        }));
+        if msg.content.is_empty() {
+            return Err(Box::new(ChatError::WrongInput {
+                msg: String::from("You should supply the Id of the receiver"),
+            }));
+        }
+
+        let opposing_id = msg.content.split_whitespace().next().unwrap_or("");
+
+        let replaced = msg.content.replace(opposing_id, "");
+        let content = replaced.trim_start_matches(" ");
+        let chat_client = self.chat_client.lock().await;
+        let message = chat_client
+            .create_message(
+                msg.name,
+                msg.plugin,
+                content.to_string(),
+                opposing_id.to_string(),
+            )
+            .await;
+
+        let rsp: Response = chat_client
+            .http_client
+            .post_message(Endpoint::PostPlugin, message)
+            .await?;
+        return Ok(rsp.err);
     }
 }
 
@@ -39,9 +62,12 @@ impl LogOutPlugin {
 #[async_trait]
 impl PluginTrait for LogOutPlugin {
     async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error>> {
-        return Err(Box::new(ChatError::WrongInput {
-            msg: String::from("TODO"),
-        }));
+        let chat_client = self.chat_client.lock().await;
+        chat_client.http_client.delete_request(msg).await?;
+
+        chat_client.unregister().await;
+
+        return Ok(UNREGISTER_FLAG.to_string());
     }
 }
 
@@ -70,9 +96,9 @@ impl PluginTrait for RegisterClientPlugin {
             .post_message(Endpoint::PostPlugin, msg)
             .await?;
 
-        chat_client.register(rsp, generate_secure_token(32));
+        chat_client.register(rsp, generate_secure_token(32)).await;
 
-        Ok(types::REGISTER_FLAG.to_string())
+        Ok(REGISTER_FLAG.to_string())
     }
 }
 

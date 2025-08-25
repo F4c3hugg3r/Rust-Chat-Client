@@ -58,21 +58,21 @@ impl ChatClient {
     }
 
     pub async fn parse_input_to_message(&self, input: &str) -> Message {
-        let content = input.trim_end_matches("\n");
+        let new_input = input.trim_end_matches("\n");
 
-        let plugin = if content.starts_with("/") {
-            input.split_whitespace().next().unwrap_or("")
+        let plugin = if new_input.starts_with("/") {
+            new_input.split_whitespace().next().unwrap_or("")
         } else {
             "/broadcast"
         };
 
-        let replaced = content.replace(plugin, "");
-        let replaced_content = replaced.trim_start_matches(" ");
+        let replaced = new_input.replace(plugin, "");
+        let content = replaced.trim_start_matches(" ");
 
         self.create_message(
             String::from(""),
             plugin.to_string(),
-            replaced_content.to_string(),
+            content.to_string(),
             String::from(""),
         )
         .await

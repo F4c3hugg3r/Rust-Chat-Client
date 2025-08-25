@@ -85,13 +85,9 @@ impl HttpClient {
 
     // DeleteRequest sends a DELETE Request to delete the client out of the server
     // including the authorization token
-    pub async fn delete_request(
-        &self,
-        endpoint: types::Endpoint,
-        msg: Message,
-    ) -> Result<types::Response, Box<dyn Error>> {
+    pub async fn delete_request(&self, msg: Message) -> Result<types::Response, Box<dyn Error>> {
         let body = serde_json::to_string(&msg)?;
-        let endpoint_url = match self.endpoints.get(&endpoint) {
+        let endpoint_url = match self.endpoints.get(&types::Endpoint::Delete) {
             Some(e) => e,
             None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
         };
