@@ -19,47 +19,47 @@ pub struct PluginRegistry<'a> {
     pub forward_plugins: Vec<&'a str>,
 }
 
-pub fn register_plugins(chat_client: ChatClient) -> PluginRegistry<'static> {
-    let mut pr = PluginRegistry {
-        chat_client: Arc::new(Mutex::new(chat_client)),
-        plugins: HashMap::new(),
-        forward_plugins: Vec::new(),
-    };
-    pr.plugins.insert(
-        "/register",
-        Box::new(plugins::RegisterClientPlugin::new_register_client_plugin(
-            pr.chat_client.clone(),
-        )),
-    );
-    pr.plugins.insert(
-        "/quit",
-        Box::new(plugins::LogOutPlugin::new_logout_plugin(
-            pr.chat_client.clone(),
-        )),
-    );
-    pr.plugins.insert(
-        "/private",
-        Box::new(plugins::PrivateMessagePlugin::new_private_message_plugin(
-            pr.chat_client.clone(),
-        )),
-    );
-    pr.plugins.insert(
-        "",
-        Box::new(plugins::ForwardPlugin::new_forward_plugin(
-            pr.chat_client.clone(),
-        )),
-    );
-    // pr.plugins.insert(
-    //     "/call",
-    //     Box::new(plugins::RegisterClientPlugin::new_register_client_plugin(
-    //         pr.chat_client.clone(),
-    //     )),
-    // );
-    pr.fill_forward_plugins();
-    pr
-}
-
 impl<'a> PluginRegistry<'a> {
+    pub fn register_plugins(chat_client: Arc<Mutex<ChatClient>>) -> PluginRegistry<'static> {
+        let mut pr = PluginRegistry {
+            chat_client,
+            plugins: HashMap::new(),
+            forward_plugins: Vec::new(),
+        };
+        pr.plugins.insert(
+            "/register",
+            Box::new(plugins::RegisterClientPlugin::new_register_client_plugin(
+                pr.chat_client.clone(),
+            )),
+        );
+        pr.plugins.insert(
+            "/quit",
+            Box::new(plugins::LogOutPlugin::new_logout_plugin(
+                pr.chat_client.clone(),
+            )),
+        );
+        pr.plugins.insert(
+            "/private",
+            Box::new(plugins::PrivateMessagePlugin::new_private_message_plugin(
+                pr.chat_client.clone(),
+            )),
+        );
+        pr.plugins.insert(
+            "",
+            Box::new(plugins::ForwardPlugin::new_forward_plugin(
+                pr.chat_client.clone(),
+            )),
+        );
+        // pr.plugins.insert(
+        //     "/call",
+        //     Box::new(plugins::RegisterClientPlugin::new_register_client_plugin(
+        //         pr.chat_client.clone(),
+        //     )),
+        // );
+        pr.fill_forward_plugins();
+        pr
+    }
+
     pub async fn find_and_execute(&self, msg: Message) -> Result<String, Box<dyn Error>> {
         let command = msg.plugin.as_str();
         if command != "/register" && !*self.chat_client.lock().await.registered.lock().await {

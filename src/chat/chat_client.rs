@@ -35,7 +35,7 @@ impl ChatClient {
     pub fn new_client(server_url: String, tx: Sender<Response>) -> ChatClient {
         let client_id = Arc::new(Mutex::new(String::from("")));
         let auth_token = Arc::new(Mutex::new(String::from("")));
-        let client = ChatClient {
+        ChatClient {
             // TODO auch client_id setzen bei Registrierung
             client_id: client_id.clone(),
             client_name: Arc::new(Mutex::new(String::from(""))),
@@ -44,9 +44,7 @@ impl ChatClient {
             output: tx,
             notify: Notify::new(),
             http_client: HttpClient::new_client(server_url, auth_token, client_id),
-        };
-
-        client
+        }
     }
 
     pub async fn register(&self, rsp: types::Response, new_id: String) {
