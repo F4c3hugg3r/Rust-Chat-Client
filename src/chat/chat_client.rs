@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Mutex, Notify};
 
+#[derive(Debug)]
 // Client handles all network tasks
 pub struct ChatClient {
     pub client_name: Arc<Mutex<String>>,
@@ -32,10 +33,10 @@ pub struct ChatClient {
 }
 
 impl ChatClient {
-    pub fn new_client(server_url: String, tx: Sender<Response>) -> ChatClient {
+    pub fn new_client(server_url: String, tx: Sender<Response>) -> Self {
         let client_id = Arc::new(Mutex::new(String::from("")));
         let auth_token = Arc::new(Mutex::new(String::from("")));
-        ChatClient {
+        Self {
             // TODO auch client_id setzen bei Registrierung
             client_id: client_id.clone(),
             client_name: Arc::new(Mutex::new(String::from(""))),

@@ -2,6 +2,7 @@ use crate::chat::chat_client::ChatClient;
 use crate::plugins::plugins;
 use crate::types::{ChatError, Message};
 use async_trait::async_trait;
+use core::fmt::Debug;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
@@ -13,6 +14,13 @@ pub trait PluginTrait {
     async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error>>;
 }
 
+impl Debug for dyn PluginTrait {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "PluginTrait (async trait object)")
+    }
+}
+
+#[derive(Debug)]
 pub struct PluginRegistry<'a> {
     pub plugins: HashMap<&'a str, Box<dyn PluginTrait>>,
     chat_client: Arc<Mutex<ChatClient>>,

@@ -9,7 +9,8 @@ use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Mutex, Notify};
 
-struct UserService {
+#[derive(Debug)]
+pub struct UserService {
     plugin_registry: PluginRegistry<'static>,
     chat_client: Arc<Mutex<ChatClient>>,
 }

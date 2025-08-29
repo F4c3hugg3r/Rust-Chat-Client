@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{Mutex, Notify};
 
+#[derive(Debug)]
 // HttpClient handles all network related tasks
 pub struct HttpClient {
     url: String,
@@ -21,8 +22,8 @@ impl HttpClient {
         server_url: String,
         auth_token: Arc<Mutex<String>>,
         client_id: Arc<Mutex<String>>,
-    ) -> HttpClient {
-        let mut client = HttpClient {
+    ) -> Self {
+        let mut client = Self {
             url: server_url.clone(),
             http_client: reqwest::Client::new(),
             endpoints: HashMap::new(),
