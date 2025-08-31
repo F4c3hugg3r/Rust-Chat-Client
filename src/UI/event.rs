@@ -32,10 +32,6 @@ pub enum Event {
 #[derive(Clone, Debug)]
 pub enum AppEvent {
     Enter,
-    /// Increment the counter.
-    Increment,
-    /// Decrement the counter.
-    Decrement,
     /// Quit the application.
     Quit,
 }
