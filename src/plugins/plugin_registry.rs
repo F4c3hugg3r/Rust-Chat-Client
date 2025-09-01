@@ -1,6 +1,6 @@
 use crate::chat::chat_client::ChatClient;
 use crate::plugins::plugins;
-use crate::types::{ChatError, Message};
+use crate::types::{ChatError, ChatErrorWithMsg, Message};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use std::collections::HashMap;
@@ -10,8 +10,9 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::{Mutex, Notify};
 
 #[async_trait]
-pub trait PluginTrait {
-    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error>>;
+pub trait PluginTrait: Send + Sync {
+    // + Send + Sync um Errors Thread Safe zu machen
+    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error + Send + Sync>>;
 }
 
 impl Debug for dyn PluginTrait {
@@ -23,12 +24,12 @@ impl Debug for dyn PluginTrait {
 #[derive(Debug)]
 pub struct PluginRegistry<'a> {
     pub plugins: HashMap<&'a str, Box<dyn PluginTrait>>,
-    chat_client: Arc<Mutex<ChatClient>>,
+    chat_client: Arc<ChatClient>,
     pub forward_plugins: Vec<&'a str>,
 }
 
 impl<'a> PluginRegistry<'a> {
-    pub fn register_plugins(chat_client: Arc<Mutex<ChatClient>>) -> PluginRegistry<'static> {
+    pub fn register_plugins(chat_client: Arc<ChatClient>) -> PluginRegistry<'static> {
         let mut pr = PluginRegistry {
             chat_client,
             plugins: HashMap::new(),
@@ -68,18 +69,20 @@ impl<'a> PluginRegistry<'a> {
         pr
     }
 
-    pub async fn find_and_execute(&self, msg: Message) -> Result<String, Box<dyn Error>> {
+    pub async fn find_and_execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg> {
         let command = msg.plugin.as_str();
-        if command != "/register" && !*self.chat_client.lock().await.registered.lock().await {
-            return Err(Box::new(ChatError::NoPermission {
-                msg: String::from("You have to be registered"),
-            }));
+        if command != "/register" && !*self.chat_client.registered.lock().await {
+            return Err(ChatErrorWithMsg::new(
+                ChatError::NoPermission,
+                String::from("You have to be registered"),
+            ));
         }
 
-        if command == "/register" && *self.chat_client.lock().await.registered.lock().await {
-            return Err(Box::new(ChatError::NoPermission {
-                msg: String::from("You are already registered"),
-            }));
+        if command == "/register" && *self.chat_client.registered.lock().await {
+            return Err(ChatErrorWithMsg::new(
+                ChatError::NoPermission,
+                String::from("You are already registered"),
+            ));
         }
 
         if command.is_empty() {
@@ -96,11 +99,15 @@ impl<'a> PluginRegistry<'a> {
         match plugin {
             Some(plugin) => match plugin.execute(msg).await {
                 Ok(str) => Ok(str),
-                Err(e) => Err(e),
+                Err(err) => Err(ChatErrorWithMsg::new(
+                    ChatError::PluginError,
+                    format!("{:?}", err.to_string()),
+                )),
             },
-            None => Err(Box::new(ChatError::EmptyField {
-                msg: format!("Plugin field in message is empty {:?}", msg),
-            })),
+            None => Err(ChatErrorWithMsg::new(
+                ChatError::EmptyField,
+                format!("Plugin field in message is empty {:?}", msg),
+            )),
         }
     }
 

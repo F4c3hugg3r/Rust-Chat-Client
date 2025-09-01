@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::service::user_service::UserService;
 use crate::{
     UI::event::{AppEvent, Event, EventHandler},
@@ -15,41 +17,32 @@ use tui_textarea::TextArea;
 
 /// Application.
 #[derive(Debug)]
-pub struct App<'a> {
+pub struct App {
     /// Is the application running?
     pub running: bool,
-    /// Counter.
-    pub counter: u8,
     /// Event handler.
     pub events: EventHandler,
-    pub input: Vec<String>,
     pub messages: Vec<String>,
-    pub user_service: UserService,
-    pub receiver: Receiver<Response>,
-    pub text_input: TextArea<'a>,
+    pub user_service: Arc<UserService>,
+    pub text_input: TextArea<'static>,
     pub vertical_scroll_state: ScrollbarState,
     pub vertical_scroll: usize,
     pub chat_size: Size,
     pub title: String,
 }
 
-// TODO weitere App Logik hinzufügen
 // TODO Title
-// TODO Message Polling
 // TODO input history
 // TODO tabelle?
 // TODO webrtc?
-impl<'a> App<'a> {
+impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(user_service: UserService, receiver: Receiver<Response>) -> Self {
-        Self {
+    pub fn new(user_service: Arc<UserService>, mut receiver: Receiver<Response>) -> Self {
+        let mut app = Self {
             running: true,
-            counter: 0,
             events: EventHandler::new(),
-            input: Vec::new(),
             messages: Vec::new(),
-            user_service,
-            receiver,
+            user_service: user_service.clone(),
             text_input: TextArea::default(),
             vertical_scroll: 0,
             vertical_scroll_state: ScrollbarState::default(),
@@ -57,7 +50,21 @@ impl<'a> App<'a> {
             title: String::from(
                 "Insert Title here.\nPress `Esc`, `Ctrl-C` or `q` to stop running.\n",
             ),
-        }
+        };
+
+        tokio::spawn(async move {
+            user_service.chat_client.clone().response_poller().await;
+        });
+
+        let sender = app.events.get_sender_clone();
+        tokio::spawn(async move {
+            while let Some(rsp) = receiver.recv().await {
+                // FIXME add error handling if needed
+                let _ = sender.send(Event::App(AppEvent::Response(rsp)));
+            }
+        });
+
+        app
     }
 
     // Event parsing
@@ -75,6 +82,7 @@ impl<'a> App<'a> {
                 Event::App(app_event) => match app_event {
                     AppEvent::Quit => self.quit(),
                     AppEvent::Enter => self.handle_message().await,
+                    AppEvent::Response(response) => self.handle_response(response).await,
                 },
             }
         }
@@ -119,18 +127,28 @@ impl<'a> App<'a> {
         self.running = false;
     }
 
+    pub async fn handle_response(&mut self, rsp: Response) {
+        self.messages.push(format!(
+            "name: {} | content: {} | error/plugin: {} | id: {}",
+            rsp.rsp_name, rsp.content, rsp.err, rsp.client_id,
+        ));
+        self.scroll();
+    }
+
     pub async fn handle_message(&mut self) {
-        //save Input
-        let input_text = self.text_input.lines().join("\n");
-        self.messages.push(input_text);
-        // TODO fix scrolling
-        if self.messages.len()
-            >= (self.chat_size.height as usize).saturating_sub(self.title.lines().count())
-        {
-            self.vertical_scroll = self.messages.len();
+        self.user_service
+            .executor(self.text_input.lines().join("\n").as_str())
+            .await;
+        self.text_input = TextArea::default(); // oder .clear()
+    }
+
+    pub fn scroll(&mut self) {
+        let title_rows = self.title.lines().count().saturating_add(4);
+        let message_rows = self.chat_size.height.saturating_sub(title_rows as u16) as usize;
+
+        if self.messages.len() > message_rows {
+            self.vertical_scroll = self.messages.len() - message_rows;
             self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
         }
-        self.text_input = TextArea::default(); // oder .clear()
-        // self.user_service.executor(input_text.as_str()).await;
     }
 }

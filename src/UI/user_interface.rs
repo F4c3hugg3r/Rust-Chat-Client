@@ -5,12 +5,13 @@ use ratatui::{
     style::{Color, Style, Stylize},
     widgets::{Block, BorderType, Paragraph, Scrollbar, ScrollbarOrientation, Widget},
 };
+use tui_textarea::TextArea;
 
 use crate::UI::app::App;
 
 /// Rendert die gesamte UI.
 /// Diese Funktion nimmt ein &mut App, damit das TextArea Widget mutiert werden kann.
-pub fn render_ui<'a>(app: &mut App<'a>, frame: &mut Frame) {
+pub fn render_ui<'a>(app: &mut App, frame: &mut Frame) {
     let area = frame.area();
     let chunks = Layout::default()
         .direction(Direction::Vertical)

@@ -18,8 +18,8 @@ use tokio::sync::Mutex;
 async fn main() -> color_eyre::Result<()> {
     let (tx, rx) = tokio::sync::mpsc::channel(1000);
     let server_url = String::from("http://localhost:8080");
-    let chat_client = Arc::new(Mutex::new(ChatClient::new_client(server_url, tx)));
-    let user_service = UserService::new_user_service(chat_client);
+    let chat_client = Arc::new(ChatClient::new_client(server_url, tx).await);
+    let user_service = Arc::new(UserService::new_user_service(chat_client));
 
     color_eyre::install()?;
     let terminal = ratatui::init();

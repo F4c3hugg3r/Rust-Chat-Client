@@ -1,3 +1,4 @@
+use crate::types::Response;
 use color_eyre::eyre::OptionExt;
 use futures::{FutureExt, StreamExt};
 use ratatui::crossterm::event::Event as CrosstermEvent;
@@ -34,6 +35,7 @@ pub enum AppEvent {
     Enter,
     /// Quit the application.
     Quit,
+    Response(Response),
 }
 
 /// Terminal event handler.
@@ -75,9 +77,13 @@ impl EventHandler {
     /// This is useful for sending events to the event handler which will be processed by the next
     /// iteration of the application's event loop.
     pub fn send(&mut self, app_event: AppEvent) {
-        // Ignore the result as the reciever cannot be dropped while this struct still has a
+        // Ignore the result as the receiver cannot be dropped while this struct still has a
         // reference to it
         let _ = self.sender.send(Event::App(app_event));
+    }
+
+    pub fn get_sender_clone(&mut self) -> mpsc::UnboundedSender<Event> {
+        self.sender.clone()
     }
 }
 

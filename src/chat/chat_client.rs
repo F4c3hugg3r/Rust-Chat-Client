@@ -33,8 +33,8 @@ pub struct ChatClient {
 }
 
 impl ChatClient {
-    pub fn new_client(server_url: String, tx: Sender<Response>) -> Self {
-        let client_id = Arc::new(Mutex::new(String::from("")));
+    pub async fn new_client(server_url: String, tx: Sender<Response>) -> Self {
+        let client_id = Arc::new(Mutex::new(helper::generate_secure_token(32)));
         let auth_token = Arc::new(Mutex::new(String::from("")));
         Self {
             // TODO auch client_id setzen bei Registrierung
@@ -44,19 +44,17 @@ impl ChatClient {
             registered: Arc::new(Mutex::new(false)),
             output: tx,
             notify: Notify::new(),
-            http_client: HttpClient::new_client(server_url, auth_token, client_id),
+            http_client: HttpClient::new_client(server_url, auth_token, client_id).await,
         }
     }
 
-    pub async fn register(&self, rsp: types::Response, new_id: String) {
+    pub async fn register(&self, rsp: types::Response) {
         let mut client_name = self.client_name.lock().await;
         let mut auth_token = self.auth_token.lock().await;
-        let mut client_id = self.client_id.lock().await;
         let mut registered = self.registered.lock().await;
 
         *client_name = rsp.rsp_name;
         *auth_token = rsp.content;
-        *client_id = new_id;
         *registered = true;
 
         self.notify.notify_waiters();

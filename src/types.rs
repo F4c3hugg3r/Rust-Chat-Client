@@ -12,17 +12,34 @@ pub enum Endpoint {
 }
 
 #[derive(Error, Debug)]
+#[error("An ChatError accured")]
+pub struct ChatErrorWithMsg {
+    pub msg: String,
+    pub kind: ChatError,
+}
+
+impl ChatErrorWithMsg {
+    pub fn new(kind: ChatError, msg: String) -> Self {
+        Self { kind, msg }
+    }
+}
+
+#[derive(Error, Debug)]
 pub enum ChatError {
     #[error("A message field is empty")]
-    EmptyField { msg: String },
-    #[error("You have no permission")]
-    NoPermission { msg: String },
+    EmptyField,
+    #[error("You got no permission")]
+    NoPermission,
     #[error("Item is not available")]
-    NotAvailable { msg: String },
+    NotAvailable,
     #[error("Timeout has been reached")]
-    TimeoutReached { msg: String },
+    TimeoutReached,
     #[error("Your input was invalid")]
-    WrongInput { msg: String },
+    WrongInput,
+    #[error("An error accured while executing a plugin")]
+    PluginError,
+    #[error("An http error accured")]
+    HttpError,
 }
 
 // #[derive(Error, Debug)]
@@ -95,6 +112,26 @@ pub struct Response {
     pub content: String,
     #[serde(rename = "errorString")]
     pub err: String,
+}
+
+impl Response {
+    pub fn empty() -> Self {
+        Response {
+            client_id: String::new(),
+            rsp_name: String::from("empty Response"),
+            content: String::new(),
+            err: String::new(),
+        }
+    }
+
+    pub fn error(error: String) -> Self {
+        Response {
+            client_id: String::new(),
+            rsp_name: String::from("error Response"),
+            content: String::new(),
+            err: error,
+        }
+    }
 }
 
 // JsonGroup contains an id, the groupname and the size of the group

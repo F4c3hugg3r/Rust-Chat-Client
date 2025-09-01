@@ -20,7 +20,7 @@ impl ChatClient {
         let client_name = self.client_name.lock().await.clone();
         let client_client_id = self.client_id.lock().await.clone();
 
-        let msg_name = if client_name.is_empty() || *self.registered.lock().await {
+        let msg_name = if name.is_empty() && *self.registered.lock().await {
             client_name
         } else {
             name
@@ -40,7 +40,7 @@ impl ChatClient {
         }
     }
 
-    pub async fn response_receiver(&self, url: &String) {
+    pub async fn response_poller(&self) {
         loop {
             self.check_registered().await;
 
@@ -48,10 +48,9 @@ impl ChatClient {
                 Ok(rsp) => {
                     let _ = self.output.send(rsp).await;
                 }
-                Err(_) => {
-                    continue;
+                Err(err) => {
                     // TODO log channel
-                    // let _ = self.debug.send(err.to_string() oder so).await;
+                    let _ = self.output.send(Response::error(err.to_string())).await;
                 }
             }
         }
