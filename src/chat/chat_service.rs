@@ -50,7 +50,7 @@ impl ChatClient {
                 }
                 Err(err) => {
                     // TODO log channel
-                    let _ = self.output.send(Response::error(err.to_string())).await;
+                    // let _ = self.output.send(Response::error(err.to_string())).await;
                 }
             }
         }

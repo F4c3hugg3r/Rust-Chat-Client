@@ -24,18 +24,18 @@ impl UserService {
     pub async fn executor(&self, input: &str) {
         let chat_client = self.chat_client.clone();
         let msg = chat_client.parse_input_to_message(input).await;
-        // debug //
-        let msg_clone = msg.clone();
-        let _ = chat_client
-            .output
-            .send(Response {
-                client_id: msg_clone.client_id,
-                rsp_name: msg_clone.name,
-                content: msg_clone.content,
-                err: msg_clone.plugin,
-            })
-            .await;
-        // debug //
+        // // debug //
+        // let msg_clone = msg.clone();
+        // let _ = chat_client
+        //     .output
+        //     .send(Response {
+        //         client_id: msg_clone.client_id,
+        //         rsp_name: msg_clone.name,
+        //         content: msg_clone.content,
+        //         err: msg_clone.plugin,
+        //     })
+        //     .await;
+        // // debug //
         let mut err = String::new();
 
         let comment = match self.plugin_registry.find_and_execute(msg).await {
