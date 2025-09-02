@@ -27,16 +27,10 @@ pub fn render_ui(app: &mut App, frame: &mut Frame) {
 
     // Nachrichtenbereich (oben)
     let message_block = Block::bordered()
-        .title(app.title.clone())
+        .title(format!(" {} ", app.title.clone()))
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Rounded)
         .border_style(style);
-
-    // if app.messages.is_empty() {
-    //     app.messages.push(Line::from(
-    //         "No messages yet. Press 'i' or Tab to start typing.".to_string(),
-    //     ));
-    // };
 
     let message_field = Paragraph::new(app.messages.clone())
         .block(message_block)

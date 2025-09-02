@@ -4,6 +4,7 @@ use crate::types;
 use crate::types::ChatError;
 use crate::types::ChatErrorWithMsg;
 use crate::types::{HttpClientError, Message, Response};
+use reqwest::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;

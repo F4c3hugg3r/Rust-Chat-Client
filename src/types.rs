@@ -54,10 +54,7 @@ pub enum HttpClientError {
     InvalidEndpoint,
 }
 
-pub const REGISTER_TITLE: &str = "Du bist registriert {}!";
-pub const UNREGISTER_TITLE: &str =
-    "Willkommen im Chatraum! - Schreibe '/register {name}' und '/help'";
-pub const GROUP_TITLE: &str = "{}, du bist in der Gruppe {}!";
+pub const DEFAULT_TITLE: &str = "Willkommen im Chatraum! - Schreibe '/register {name}' und '/help'";
 pub const WINDOW_RESIZE_FLAG: &str = "windowResize";
 pub const REGISTER_OUTPUT: &str = "-> Du kannst nun Nachrichten schreiben oder Commands ausführen [ '/help' → Befehle anzeigen ] - [ '/quit' → Chat verlassen ] - [ '/users' → Tabelle aktualisieren ]";
 
