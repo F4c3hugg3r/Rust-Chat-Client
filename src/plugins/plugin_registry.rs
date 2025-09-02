@@ -12,7 +12,7 @@ use tokio::sync::{Mutex, Notify};
 #[async_trait]
 pub trait PluginTrait: Send + Sync {
     // + Send + Sync um Errors Thread Safe zu machen
-    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error + Send + Sync>>;
+    async fn execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg>;
 }
 
 impl Debug for dyn PluginTrait {
@@ -99,10 +99,7 @@ impl<'a> PluginRegistry<'a> {
         match plugin {
             Some(plugin) => match plugin.execute(msg).await {
                 Ok(str) => Ok(str),
-                Err(err) => Err(ChatErrorWithMsg::new(
-                    ChatError::PluginError,
-                    format!("{:?}", err.to_string()),
-                )),
+                Err(err) => Err(err),
             },
             None => Err(ChatErrorWithMsg::new(
                 ChatError::EmptyField,

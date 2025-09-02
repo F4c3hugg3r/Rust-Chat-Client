@@ -66,40 +66,50 @@ impl HttpClient {
     pub async fn get_response(
         &self,
         endpoint: types::Endpoint,
-    ) -> Result<types::Response, Box<dyn Error + Send + Sync>> {
+    ) -> Result<types::Response, ChatErrorWithMsg> {
         // FIXME client registered testen in response poller
 
         let endpoint_url = match self.endpoints.get(&endpoint) {
             Some(e) => e,
-            None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
+            None => {
+                return Err(ChatErrorWithMsg::new(
+                    ChatError::HttpError,
+                    "Invalid endpoint".to_string(),
+                ));
+            }
         };
         let auth_token = self.auth_token.lock().await.clone();
 
-        let http_response: reqwest::Response = self
+        let http_response = self
             .http_client
             .get(endpoint_url)
             .header("Authorization", auth_token)
             .send()
-            .await?;
+            .await
+            .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string()))?;
+
         match http_response.error_for_status() {
-            Ok(rsp) => Ok(rsp.json().await?),
-            Err(e) => Err(Box::new(ChatErrorWithMsg::new(
-                ChatError::HttpError,
-                e.to_string(),
-            ))),
+            Ok(rsp) => rsp
+                .json()
+                .await
+                .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string())),
+            Err(e) => Err(ChatErrorWithMsg::new(ChatError::HttpError, e.to_string())),
         }
     }
 
     // DeleteRequest sends a DELETE Request to delete the client out of the server
     // including the authorization token
-    pub async fn delete_request(
-        &self,
-        msg: Message,
-    ) -> Result<types::Response, Box<dyn Error + Send + Sync>> {
-        let body = serde_json::to_string(&msg)?;
+    pub async fn delete_request(&self, msg: Message) -> Result<types::Response, ChatErrorWithMsg> {
+        let body = serde_json::to_string(&msg)
+            .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string()))?;
         let endpoint_url = match self.endpoints.get(&types::Endpoint::Delete) {
             Some(e) => e,
-            None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
+            None => {
+                return Err(ChatErrorWithMsg::new(
+                    ChatError::HttpError,
+                    "Invalid endpoint".to_string(),
+                ));
+            }
         };
 
         let auth_token: String = self.auth_token.lock().await.clone();
@@ -111,13 +121,15 @@ impl HttpClient {
             .header("Content-Type", "application/json")
             .body(body)
             .send()
-            .await?;
+            .await
+            .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string()))?;
+
         match http_response.error_for_status() {
-            Ok(rsp) => Ok(rsp.json().await?),
-            Err(e) => Err(Box::new(ChatErrorWithMsg::new(
-                ChatError::HttpError,
-                e.to_string(),
-            ))),
+            Ok(rsp) => rsp
+                .json()
+                .await
+                .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string())),
+            Err(e) => Err(ChatErrorWithMsg::new(ChatError::HttpError, e.to_string())),
         }
     }
 
@@ -127,11 +139,17 @@ impl HttpClient {
         &self,
         endpoint: types::Endpoint,
         msg: Message,
-    ) -> Result<types::Response, Box<dyn Error + Send + Sync>> {
-        let body = serde_json::to_string(&msg)?;
+    ) -> Result<types::Response, ChatErrorWithMsg> {
+        let body = serde_json::to_string(&msg)
+            .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string()))?;
         let endpoint_url = match self.endpoints.get(&endpoint) {
             Some(e) => e,
-            None => return Err(Box::new(HttpClientError::InvalidEndpoint)),
+            None => {
+                return Err(ChatErrorWithMsg::new(
+                    ChatError::HttpError,
+                    "Invalid endpoint".to_string(),
+                ));
+            }
         };
         let auth_token: String = self.auth_token.lock().await.clone();
 
@@ -142,13 +160,15 @@ impl HttpClient {
             .header("Content-Type", "application/json")
             .body(body)
             .send()
-            .await?;
+            .await
+            .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string()))?;
+
         match http_response.error_for_status() {
-            Ok(rsp) => Ok(rsp.json().await?),
-            Err(e) => Err(Box::new(ChatErrorWithMsg::new(
-                ChatError::HttpError,
-                e.to_string(),
-            ))),
+            Ok(rsp) => rsp
+                .json()
+                .await
+                .map_err(|e| ChatErrorWithMsg::new(ChatError::HttpError, e.to_string())),
+            Err(e) => Err(ChatErrorWithMsg::new(ChatError::HttpError, e.to_string())),
         }
     }
 }

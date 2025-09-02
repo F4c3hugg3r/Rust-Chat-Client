@@ -22,12 +22,12 @@ impl PrivateMessagePlugin {
 
 #[async_trait]
 impl PluginTrait for PrivateMessagePlugin {
-    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error + Send + Sync>> {
+    async fn execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg> {
         if msg.content.is_empty() {
-            return Err(Box::new(ChatErrorWithMsg::new(
+            return Err(ChatErrorWithMsg::new(
                 ChatError::WrongInput,
                 String::from("You should supply the Id of the receiver"),
-            )));
+            ));
         }
 
         let opposing_id = msg.content.split_whitespace().next().unwrap_or("");
@@ -64,7 +64,7 @@ impl LogOutPlugin {
 
 #[async_trait]
 impl PluginTrait for LogOutPlugin {
-    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error + Send + Sync>> {
+    async fn execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg> {
         let chat_client = self.chat_client.clone();
         chat_client.http_client.delete_request(msg).await?;
 
@@ -86,12 +86,12 @@ impl RegisterClientPlugin {
 
 #[async_trait]
 impl PluginTrait for RegisterClientPlugin {
-    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error + Send + Sync>> {
+    async fn execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg> {
         if msg.content.len() > 50 || msg.content.len() < 3 {
-            return Err(Box::new(ChatErrorWithMsg::new(
+            return Err(ChatErrorWithMsg::new(
                 ChatError::WrongInput,
                 String::from("Your name has to be between 3 and 50 characters long"),
-            )));
+            ));
         }
 
         let chat_client = self.chat_client.clone();
@@ -121,7 +121,7 @@ impl ForwardPlugin {
 
 #[async_trait]
 impl PluginTrait for ForwardPlugin {
-    async fn execute(&self, msg: Message) -> Result<String, Box<dyn Error + Send + Sync>> {
+    async fn execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg> {
         let rsp: Response = self
             .chat_client
             .http_client
