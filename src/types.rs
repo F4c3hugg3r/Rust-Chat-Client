@@ -56,7 +56,9 @@ pub enum HttpClientError {
 
 pub const DEFAULT_TITLE: &str = "Willkommen im Chatraum! - Schreibe '/register {name}' und '/help'";
 pub const WINDOW_RESIZE_FLAG: &str = "windowResize";
-pub const REGISTER_OUTPUT: &str = "-> Du kannst nun Nachrichten schreiben oder Commands ausführen [ '/help' → Befehle anzeigen ] - [ '/quit' → Chat verlassen ] - [ '/users' → Tabelle aktualisieren ]";
+pub const REGISTER_OUTPUT: &str = "-> Du kannst nun Nachrichten schreiben oder Commands ausführen";
+pub const REGISTER_HELP_OUTPUT: &str = "[ '/help' → Befehle anzeigen ]";
+pub const REGISTER_QUIT_OUTPUT: &str = "[ '/quit' → Chat verlassen ]";
 
 // muteable device
 pub const MICROPHONE: &str = "Mic";

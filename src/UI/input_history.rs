@@ -26,10 +26,10 @@ impl InputHistory {
     }
 
     pub fn check_first(&mut self) -> bool {
-        if self.first == true {
+        if self.first {
             self.first = false;
             return true;
         }
-        return false;
+        false
     }
 }

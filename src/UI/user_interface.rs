@@ -32,7 +32,7 @@ pub fn render_ui(app: &mut App, frame: &mut Frame) {
         .border_type(BorderType::Rounded)
         .border_style(style);
 
-    let message_field = Paragraph::new(app.messages.clone())
+    let message_field = Paragraph::new(app.messages.lines.clone())
         .block(message_block)
         .bg(Color::Black)
         .scroll((app.vertical_scroll as u16, 0))
@@ -41,7 +41,9 @@ pub fn render_ui(app: &mut App, frame: &mut Frame) {
     frame.render_widget(message_field, chunks[0]);
 
     // Scrollbar
-    app.vertical_scroll_state = app.vertical_scroll_state.content_length(app.messages.len());
+    app.vertical_scroll_state = app
+        .vertical_scroll_state
+        .content_length(app.messages.lines.len());
     frame.render_stateful_widget(
         Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("↑"))
@@ -52,11 +54,12 @@ pub fn render_ui(app: &mut App, frame: &mut Frame) {
 
     // Eingabebereich (unten)
     let input_block = Block::bordered()
-        .title("Input")
-        .title_alignment(Alignment::Center)
+        .title("Send [Shift Enter] | Previous Input [Shift ←] | Last Input [Shift →]")
+        .title_alignment(Alignment::Right)
         .border_type(BorderType::Rounded)
         .border_style(style);
 
+    app.text_input.set_cursor_line_style(Style::default());
     app.text_input.set_block(input_block);
     app.text_input.set_style(Style::new().bg(Color::Black));
     app.text_input.render(chunks[1], frame.buffer_mut());

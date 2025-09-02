@@ -1,9 +1,5 @@
 use std::sync::Arc;
 
-use crate::UI::{
-    input_history::InputHistory,
-    user_interface::{blue_span, purple_span, red_span, turkis_span},
-};
 use crate::service::user_service::UserService;
 use crate::types::*;
 use crate::{
@@ -11,15 +7,23 @@ use crate::{
     UI::user_interface,
     types::Response,
 };
-use ratatui::layout::Size;
+use crate::{
+    UI::{
+        input_history::InputHistory,
+        user_interface::{blue_span, purple_span, red_span, turkis_span},
+    },
+    helper::lines_from_string,
+};
+use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
 use ratatui::{
     DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
 };
+use ratatui::{layout::Size, text::Text};
 use tokio::sync::mpsc::Receiver;
-use tui_textarea::TextArea;
+use tui_textarea::{CursorMove, TextArea};
 
 /// Application.
 #[derive(Debug)]
@@ -28,7 +32,7 @@ pub struct App<'a> {
     pub running: bool,
     /// Event handler.
     pub events: EventHandler,
-    pub messages: Vec<Line<'a>>,
+    pub messages: Text<'a>,
     pub title: Line<'a>,
     pub user_service: Arc<UserService>,
     pub text_input: TextArea<'static>,
@@ -47,7 +51,7 @@ impl<'a> App<'a> {
         let mut app = Self {
             running: true,
             events: EventHandler::new(),
-            messages: Vec::new(),
+            messages: Text::from(String::new()),
             user_service: user_service.clone(),
             text_input: TextArea::default(),
             vertical_scroll: 0,
@@ -105,6 +109,22 @@ impl<'a> App<'a> {
     // sendet AppEvents
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
+        // TODO custom keymaps
+
+        if key_event.modifiers == KeyModifiers::SHIFT {
+            match key_event.code {
+                KeyCode::Left | KeyCode::Right => {
+                    let str = self.search_input_history(key_event.code);
+                    self.text_input = TextArea::default();
+                    self.text_input.insert_str(str);
+                }
+                _ => {
+                    self.text_input.input(key_event);
+                }
+            }
+            return Ok(());
+        }
+
         match key_event.code {
             KeyCode::Esc => self.events.send(AppEvent::Quit),
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
@@ -119,11 +139,6 @@ impl<'a> App<'a> {
                 self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
                 self.vertical_scroll_state =
                     self.vertical_scroll_state.position(self.vertical_scroll);
-            }
-            KeyCode::Left | KeyCode::Right => {
-                let str = self.search_input_history(key_event.code);
-                self.text_input = TextArea::default();
-                self.text_input.insert_str(str);
             }
             KeyCode::Enter => self.events.send(AppEvent::Enter),
             // Other handlers you could add here.
@@ -146,25 +161,25 @@ impl<'a> App<'a> {
     }
 
     pub async fn handle_response(&mut self, rsp: Response) {
-        let line = self.evaluate_response(rsp).await;
-        if !line.spans.is_empty() {
-            self.display_message(line);
+        let lines = self.evaluate_response(rsp).await.unwrap_or_default();
+        if !lines.is_empty() {
+            self.display_message(lines);
         }
     }
 
-    // FIXME möglicherweise vec lines returnen, damit multi line output möglich ist
-    pub async fn evaluate_response(&mut self, rsp: Response) -> Line<'static> {
+    // TODO vec lines returnen, damit multi line output möglich ist
+    pub async fn evaluate_response(&mut self, rsp: Response) -> Option<Vec<Line<'static>>> {
         match rsp {
             // error output
             Response { err, .. } if !err.is_empty() => {
                 if err == IGNORE_RESPONSE_TAG {
-                    return Line::default();
+                    return None;
                 }
-                Line::from(red_span(err.to_string()))
+                Some(vec![Line::from(red_span(err.to_string()))])
             }
 
             // empty output
-            Response { content, .. } if content.is_empty() => Line::default(),
+            Response { content, .. } if content.is_empty() => None,
 
             // register output
             Response { content, .. } if content == REGISTER_FLAG => {
@@ -176,7 +191,11 @@ impl<'a> App<'a> {
                     .await
                     .clone();
                 self.switch_title(REGISTER_FLAG, [client_name, String::from("")]);
-                Line::from(blue_span(REGISTER_OUTPUT.to_string()))
+                Some(vec![
+                    Line::from(blue_span(REGISTER_OUTPUT.to_string())),
+                    Line::from(blue_span(REGISTER_HELP_OUTPUT.to_string())),
+                    Line::from(blue_span(REGISTER_QUIT_OUTPUT.to_string())),
+                ])
             }
 
             // server output
@@ -185,20 +204,22 @@ impl<'a> App<'a> {
                 if rsp.content == UNREGISTER_FLAG {
                     self.switch_title(UNREGISTER_FLAG, [String::new(), String::new()]);
                 }
-                Line::from(blue_span(rsp.content))
+                Some(vec![Line::from(blue_span(rsp.content))])
             }
 
             // one user left output
-            Response { rsp_name, .. } if rsp_name == USER_REMOVE_FLAG => Line::from(vec![
-                purple_span(rsp.content),
-                blue_span(String::from("hat den Chat verlassen")),
-            ]),
+            Response { rsp_name, .. } if rsp_name == USER_REMOVE_FLAG => {
+                Some(vec![Line::from(vec![
+                    purple_span(rsp.content),
+                    blue_span(String::from(" hat den Chat verlassen")),
+                ])])
+            }
 
             // one user joined output
-            Response { rsp_name, .. } if rsp_name == USER_ADD_FLAG => Line::from(vec![
+            Response { rsp_name, .. } if rsp_name == USER_ADD_FLAG => Some(vec![Line::from(vec![
                 purple_span(rsp.content),
-                blue_span(String::from("ist dem Chat beigetreten")),
-            ]),
+                blue_span(String::from(" ist dem Chat beigetreten")),
+            ])]),
 
             // add group output
             Response { rsp_name, .. } if rsp_name == ADD_GROUP_FLAG => {
@@ -212,11 +233,14 @@ impl<'a> App<'a> {
                     .await
                     .clone();
                 self.switch_title(ADD_GROUP_FLAG, [client_name, group_name.clone()]);
-                Line::from(vec![
-                    blue_span(String::from("-> Du bist nun Teil der Gruppe ")),
-                    turkis_span(group_name),
-                    blue_span(String::from(
-                        " [ Private Nachrichten kannst du weiterhin außerhalb verschicken ]",
+                Some(vec![
+                    Line::from(vec![
+                        blue_span("-> Du bist nun Teil der Gruppe ".to_string()),
+                        turkis_span(group_name),
+                    ]),
+                    Line::from(blue_span(
+                        " [ Private Nachrichten kannst du weiterhin außerhalb verschicken ]"
+                            .to_string(),
                     )),
                 ])
             }
@@ -232,22 +256,32 @@ impl<'a> App<'a> {
                     .await
                     .clone();
                 self.switch_title(REGISTER_FLAG, [client_name, String::new()]);
-                Line::from(blue_span(REGISTER_OUTPUT.to_string()))
+                Some(vec![
+                    Line::from(blue_span(REGISTER_OUTPUT.to_string())),
+                    Line::from(blue_span(REGISTER_HELP_OUTPUT.to_string())),
+                    Line::from(blue_span(REGISTER_QUIT_OUTPUT.to_string())),
+                ])
             }
 
             // slice output
             // TODO maybe als Tabs und Table
 
             // response output
-            _ => Line::from(vec![
-                turkis_span(rsp.rsp_name),
-                Span::raw(format!(": {}", rsp.content)),
-            ]),
+            _ => {
+                let mut result = vec![Line::from(vec![
+                    turkis_span(rsp.rsp_name),
+                    Span::from(": "),
+                ])];
+                result.extend(lines_from_string(&rsp.content));
+                Some(result)
+            }
         }
     }
 
-    pub fn display_message(&mut self, line: Line<'a>) {
-        self.messages.push(line);
+    pub fn display_message(&mut self, lines: Vec<Line<'a>>) {
+        for line in lines {
+            self.messages.lines.push(line);
+        }
     }
 
     pub async fn handle_message(&mut self) {
@@ -259,9 +293,10 @@ impl<'a> App<'a> {
     }
 
     pub fn scroll(&mut self) {
-        if self.messages.len() > self.chat_size.height.saturating_sub(5).into() {
+        if self.messages.lines.len() > self.chat_size.height.saturating_sub(5).into() {
             self.vertical_scroll = self
                 .messages
+                .lines
                 .len()
                 .saturating_sub(self.chat_size.height.into());
             self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
@@ -292,7 +327,7 @@ impl<'a> App<'a> {
 
     pub fn search_input_history(&mut self, key_code: KeyCode) -> String {
         let pending: i32;
-        if self.messages.is_empty() {
+        if self.messages.lines.is_empty() || self.history.inputs.is_empty() {
             return String::new();
         }
 
