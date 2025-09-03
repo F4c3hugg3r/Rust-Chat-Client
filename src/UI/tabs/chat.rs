@@ -1,5 +1,6 @@
 use crate::UI::app::App;
 use crate::UI::user_interface::blue_span;
+use crate::types;
 use color_eyre::owo_colors::OwoColorize;
 use ratatui::prelude::Rect;
 use ratatui::style::Modifier;
@@ -19,7 +20,7 @@ pub fn render_chat_tab(app: &mut App, frame: &mut Frame, area: Rect) {
         .split(area);
     app.chat_size = chunks[0].as_size();
 
-    let style = Style::new().fg(Color::Cyan).bg(Color::Black);
+    let style = Style::new().fg(types::DARK_TURKIS_COLOR).bg(Color::Black);
 
     // Nachrichtenbereich (oben)
     let message_block = Block::bordered()
@@ -50,7 +51,7 @@ pub fn render_chat_tab(app: &mut App, frame: &mut Frame, area: Rect) {
 
     // Eingabebereich (unten)
     let input_block = Block::bordered()
-        .title("Send [Shift Enter] | Previous Input [Shift ←] | Last Input [Shift →]")
+        .title(" Previous Input [Shift ←] | Last Input [Shift →]")
         .title_alignment(Alignment::Right)
         .border_type(BorderType::Rounded)
         .border_style(style);

@@ -1,10 +1,12 @@
 use crate::UI::app::App;
 use crate::UI::tabs::tabs::SelectedTab;
+use crate::types;
 use Constraint::{Length, Min};
 use color_eyre::owo_colors::OwoColorize;
 use ratatui::prelude::Buffer;
 use ratatui::prelude::Rect;
 use ratatui::style::Modifier;
+use ratatui::style::palette::tailwind;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Tabs;
@@ -65,26 +67,21 @@ fn render_title(area: Rect, buf: &mut Buffer) {
 
 // Einfache Farbstile
 pub fn red_span(text: String) -> Span<'static> {
-    Span::styled(text, Style::new().fg(Color::Rgb(191, 53, 53)))
+    Span::styled(text, Style::new().fg(types::RED_COLOR))
 }
 
 pub fn blue_span(text: String) -> Span<'static> {
-    Span::styled(text, Style::new().fg(Color::Rgb(53, 113, 191)))
+    Span::styled(text, Style::new().fg(types::BLUE_COLOR))
 }
 
 pub fn purple_span(text: String) -> Span<'static> {
-    Span::styled(text, Style::new().fg(Color::Indexed(63)))
+    Span::styled(text, Style::new().fg(types::PURPLE_COLOR))
 }
 
 pub fn turkis_span(text: String) -> Span<'static> {
-    Span::styled(text, Style::new().fg(Color::Rgb(53, 191, 188)))
+    Span::styled(text, Style::new().fg(types::TURKIS_COLOR))
 }
 
 pub fn green_span(text: String) -> Span<'static> {
-    Span::styled(text, Style::new().fg(Color::Rgb(62, 138, 41)))
-}
-
-// Faint (blass)
-pub fn faint_span(text: String) -> Span<'static> {
-    Span::styled(text, Style::new().add_modifier(Modifier::DIM))
+    Span::styled(text, Style::new().fg(types::GREEN_COLOR))
 }

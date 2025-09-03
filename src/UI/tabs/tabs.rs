@@ -8,7 +8,9 @@ use ratatui::{style::Color, text::Line, widgets::Paragraph};
 use strum_macros::{Display, EnumIter, FromRepr};
 
 use crate::UI::app::App;
-use crate::UI::tabs::chat;
+use crate::UI::tabs::{chat, users};
+use crate::types::BLUE_COLOR;
+use crate::types::TURKIS_COLOR;
 
 #[derive(Default, Clone, Copy, Display, FromRepr, EnumIter, Debug)]
 pub enum SelectedTab {
@@ -55,7 +57,9 @@ impl SelectedTab {
         chat::render_chat_tab(app, frame, area);
     }
 
-    fn render_tab1(self, app: &mut App, frame: &mut Frame, area: Rect) {}
+    fn render_tab1(self, app: &mut App, frame: &mut Frame, area: Rect) {
+        users::UsersTable::render_users_tab(app, frame, area);
+    }
 
     fn render_tab2(self, app: &mut App, frame: &mut Frame, area: Rect) {}
 
@@ -64,9 +68,9 @@ impl SelectedTab {
     pub const fn palette(self) -> Palette {
         match self {
             Self::Users => Palette {
-                fg: Color::Rgb(53, 113, 191), // blue
+                fg: BLUE_COLOR, // blue
                 bg: Color::Black,
-                border: Color::Rgb(53, 113, 191),
+                border: BLUE_COLOR,
             },
             Self::Tab4 => Palette {
                 fg: Color::Indexed(63), // purple
@@ -74,9 +78,9 @@ impl SelectedTab {
                 border: Color::Indexed(63),
             },
             Self::Chat => Palette {
-                fg: Color::Rgb(53, 191, 188), // turkis
+                fg: TURKIS_COLOR, // turkis
                 bg: Color::Black,
-                border: Color::Rgb(53, 191, 188),
+                border: TURKIS_COLOR,
             },
             Self::Help => Palette {
                 fg: Color::Rgb(191, 53, 53), // orange

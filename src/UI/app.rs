@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::UI::tabs::tabs::SelectedTab;
+use crate::UI::tabs::users::UsersTable;
 use crate::service::user_service::UserService;
 use crate::types::*;
 use crate::{
@@ -15,6 +16,7 @@ use crate::{
     },
     helper::lines_from_string,
 };
+use color_eyre::eyre::Ok;
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
@@ -42,9 +44,13 @@ pub struct App<'a> {
     pub chat_size: Size,
     pub history: InputHistory,
     pub selected_tab: SelectedTab,
+    pub users_table: UsersTable,
 }
 
-// TODO tabelle?
+// FIXME es wird immer /user verschickt -> nur beim wechseln
+// TODO default für group bei jsonClient setzen oder bei mir selbst anpassen
+// TODO aktualisiertaste für /users bzw /group users taste im users tab
+// TODO user Tabelle bei Aufruf & registrierung aktualisieren bzw bei unregister zurücksetzen
 // TODO webrtc?
 impl<'a> App<'a> {
     /// Constructs a new instance of [`App`].
@@ -65,6 +71,7 @@ impl<'a> App<'a> {
                 inputs: Vec::new(),
             },
             selected_tab: SelectedTab::Chat,
+            users_table: UsersTable::new(),
         };
 
         tokio::spawn(async move {
@@ -95,7 +102,7 @@ impl<'a> App<'a> {
                 Event::Tick => self.tick(),
                 Event::Crossterm(event) => {
                     if let crossterm::event::Event::Key(key_event) = event {
-                        self.handle_key_events(key_event)?;
+                        self.handle_key_events(key_event).await?;
                     }
                 }
                 Event::App(app_event) => match app_event {
@@ -110,46 +117,65 @@ impl<'a> App<'a> {
 
     // sendet AppEvents
     /// Handles the key events and updates the state of [`App`].
-    pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
-        if key_event.modifiers == KeyModifiers::SHIFT {
-            match key_event.code {
-                KeyCode::Left | KeyCode::Right => {
-                    let str = self.search_input_history(key_event.code);
-                    self.text_input = TextArea::default();
-                    self.text_input.insert_str(str);
-                }
-                _ => {
-                    self.text_input.input(key_event);
-                }
-            }
-            return Ok(());
-        }
-
+    pub async fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
         match key_event.code {
-            KeyCode::Esc => self.events.send(AppEvent::Quit),
-            KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
-                self.events.send(AppEvent::Quit)
-            }
-            KeyCode::Down => {
-                self.vertical_scroll = self.vertical_scroll.saturating_add(1);
-                self.vertical_scroll_state =
-                    self.vertical_scroll_state.position(self.vertical_scroll);
-            }
-            KeyCode::Up => {
-                self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
-                self.vertical_scroll_state =
-                    self.vertical_scroll_state.position(self.vertical_scroll);
-            }
             KeyCode::Char('<') => {
                 self.next_tab();
             }
             KeyCode::Char('>') => {
                 self.previous_tab();
             }
-            KeyCode::Enter => self.events.send(AppEvent::Enter),
-            // Other handlers you could add here.
+            KeyCode::Esc => self.events.send(AppEvent::Quit),
+            KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
+                self.events.send(AppEvent::Quit)
+            }
             _ => {
-                self.text_input.input(key_event);
+                match self.selected_tab {
+                    SelectedTab::Users => match key_event.code {
+                        KeyCode::Up => self.users_table.previous_row(),
+                        KeyCode::Down => self.users_table.next_row(),
+                        _ => {
+                            self.text_input.input(key_event);
+                        }
+                    },
+                    SelectedTab::Chat => {
+                        if key_event.modifiers == KeyModifiers::SHIFT {
+                            match key_event.code {
+                                KeyCode::Left | KeyCode::Right => {
+                                    let str = self.search_input_history(key_event.code);
+                                    self.text_input = TextArea::default();
+                                    self.text_input.insert_str(str);
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        match key_event.code {
+                            KeyCode::Down => {
+                                self.vertical_scroll = self.vertical_scroll.saturating_add(1);
+                                self.vertical_scroll_state =
+                                    self.vertical_scroll_state.position(self.vertical_scroll);
+                            }
+                            KeyCode::Up => {
+                                self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
+                                self.vertical_scroll_state =
+                                    self.vertical_scroll_state.position(self.vertical_scroll);
+                            }
+                            KeyCode::Enter => self.events.send(AppEvent::Enter),
+                            // Other handlers you could add here.
+                            _ => {
+                                self.text_input.input(key_event);
+                            }
+                        }
+                    }
+                    _ => {}
+                };
+            }
+        }
+        if matches!(self.selected_tab, SelectedTab::Users) {
+            match *self.user_service.chat_client.group.lock().await {
+                Some(_) => self.user_service.executor("/group users").await,
+                None => self.user_service.executor("/users").await,
             }
         }
         Ok(())
@@ -227,6 +253,10 @@ impl<'a> App<'a> {
                     self.switch_title(UNREGISTER_FLAG, [String::new(), String::new()]);
                 }
                 self.display_message(vec![Line::from(blue_span(DEFAULT_MESSAGE.to_string()))]);
+                self.users_table.update_items(
+                    vec![],
+                    self.user_service.chat_client.own_json_client().await,
+                );
                 Some(vec![Line::from(blue_span(rsp.content))])
             }
 
@@ -252,8 +282,8 @@ impl<'a> App<'a> {
                     .handle_add_group(rsp.content)
                     .await
                 {
-                    Ok(g) => g.name,
-                    Err(e) => {
+                    Result::Ok(g) => g.name,
+                    Result::Err(e) => {
                         return Some(vec![Line::from(red_span(format!("{}: {}", e.kind, e.msg)))]);
                     }
                 };
@@ -279,7 +309,7 @@ impl<'a> App<'a> {
 
             // leave group output
             Response { rsp_name, .. } if rsp_name == LEAVE_GROUP_FLAG => {
-                *self.user_service.chat_client.group_id.lock().await = None;
+                *self.user_service.chat_client.group.lock().await = None;
                 let client_name = self
                     .user_service
                     .chat_client
@@ -297,14 +327,22 @@ impl<'a> App<'a> {
 
             // slice output
             // TODO maybe als Tabs und Table
+            Response { rsp_name, .. } if rsp_name == USERS_FLAG => {
+                let users: Vec<JsonClient> = serde_json::from_str(&rsp.content).unwrap_or_default();
+                //return Some(vec![Line::from(red_span(e.to_string()))])
+                self.users_table
+                    .update_items(users, self.user_service.chat_client.own_json_client().await);
+
+                None
+            }
 
             // response output
             _ => {
-                let mut result = vec![Line::from(vec![
+                let result = vec![Line::from(vec![
                     turkis_span(rsp.rsp_name),
                     Span::from(": "),
+                    Span::from(rsp.content),
                 ])];
-                result.extend(lines_from_string(&rsp.content));
                 Some(result)
             }
         }

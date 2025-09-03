@@ -13,7 +13,7 @@ pub struct ChatClient {
     pub client_name: Arc<Mutex<String>>,
     pub client_id: Arc<Mutex<String>>,
     pub auth_token: Arc<Mutex<String>>,
-    pub group_id: Arc<Mutex<Option<String>>>,
+    pub group: Arc<Mutex<Option<JsonGroup>>>,
     pub registered: Arc<Mutex<bool>>,
     pub output: Sender<Response>,
     pub http_client: HttpClient,
@@ -39,7 +39,7 @@ impl ChatClient {
         Self {
             client_id: client_id.clone(),
             client_name: Arc::new(Mutex::new(String::new())),
-            group_id: Arc::new(Mutex::new(None)),
+            group: Arc::new(Mutex::new(None)),
             auth_token: auth_token.clone(),
             registered: Arc::new(Mutex::new(false)),
             output: tx,
@@ -64,7 +64,7 @@ impl ChatClient {
         let mut client_name = self.client_name.lock().await;
         let mut auth_token = self.auth_token.lock().await;
         let mut registered = self.registered.lock().await;
-        let mut group_id = self.group_id.lock().await;
+        let mut group_id = self.group.lock().await;
 
         *group_id = None;
         *client_name = String::from("");
@@ -98,7 +98,7 @@ impl ChatClient {
             }
         };
 
-        let _ = self.group_id.lock().await.insert(group.group_id.clone());
+        let _ = self.group.lock().await.insert(group.clone());
 
         Ok(group)
     }

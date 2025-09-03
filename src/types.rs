@@ -1,3 +1,6 @@
+use ratatui::style::palette::tailwind;
+use ratatui::style::{Color, Style};
+use ratatui::text::Span;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -53,6 +56,25 @@ pub enum HttpClientError {
     #[error("This endpoint is invalid")]
     InvalidEndpoint,
 }
+
+pub fn dummy_json_client() -> JsonClient {
+    JsonClient {
+        name: "Bitte registriere dich, um die Clients zu sehen.".to_string(),
+        call_state: "".to_string(),
+        client_id: "".to_string(),
+        group_name: "".to_string(),
+        group_id: "".to_string(),
+    }
+}
+
+// Farbkonstanten
+pub const RED_COLOR: Color = Color::Rgb(191, 53, 53);
+pub const BLUE_COLOR: Color = tailwind::BLUE.c400;
+pub const PURPLE_COLOR: Color = tailwind::PURPLE.c950;
+pub const TURKIS_COLOR: Color = Color::Rgb(53, 191, 188);
+pub const DARK_TURKIS_COLOR: Color = tailwind::CYAN.c800;
+pub const GREEN_COLOR: Color = Color::Rgb(62, 138, 41);
+pub const DARK_YELLOW_COLOR: Color = tailwind::YELLOW.c950;
 
 pub const DEFAULT_TITLE: &str = "Willkommen im Chatraum!";
 pub const DEFAULT_MESSAGE: &str = "-> Schreibe '/register {name}' um dich zu registrieren";

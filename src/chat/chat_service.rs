@@ -1,6 +1,6 @@
 use crate::helper;
 use crate::network::http_client::HttpClient;
-use crate::types;
+use crate::types::{self, JsonClient};
 use crate::types::{Endpoint, Message, Response};
 use crate::{chat::chat_client::ChatClient, network::http_client};
 use std::collections::HashMap;
@@ -75,5 +75,24 @@ impl ChatClient {
             String::from(""),
         )
         .await
+    }
+
+    pub async fn own_json_client(&self) -> JsonClient {
+        let group_guard = self.group.lock().await;
+        let group_name = match &*group_guard {
+            Some(g) => g.name.clone(),
+            None => String::from("no group"),
+        };
+        let group_id = match &*group_guard {
+            Some(g) => g.group_id.clone(),
+            None => String::from("no group_id"),
+        };
+        JsonClient {
+            name: self.client_name.lock().await.clone(),
+            call_state: String::from("Todo current_calling"),
+            client_id: self.client_id.lock().await.clone(),
+            group_name,
+            group_id,
+        }
     }
 }
