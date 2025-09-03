@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::UI::tabs::tabs::SelectedTab;
 use crate::service::user_service::UserService;
 use crate::types::*;
 use crate::{
@@ -40,9 +41,9 @@ pub struct App<'a> {
     pub vertical_scroll: usize,
     pub chat_size: Size,
     pub history: InputHistory,
+    pub selected_tab: SelectedTab,
 }
 
-// TODO input history
 // TODO tabelle?
 // TODO webrtc?
 impl<'a> App<'a> {
@@ -51,7 +52,7 @@ impl<'a> App<'a> {
         let mut app = Self {
             running: true,
             events: EventHandler::new(),
-            messages: Text::from(String::new()),
+            messages: Text::from(vec![Line::from(blue_span(DEFAULT_MESSAGE.to_string()))]),
             user_service: user_service.clone(),
             text_input: TextArea::default(),
             vertical_scroll: 0,
@@ -63,6 +64,7 @@ impl<'a> App<'a> {
                 first: false,
                 inputs: Vec::new(),
             },
+            selected_tab: SelectedTab::Chat,
         };
 
         tokio::spawn(async move {
@@ -97,7 +99,7 @@ impl<'a> App<'a> {
                     }
                 }
                 Event::App(app_event) => match app_event {
-                    AppEvent::Quit => self.quit(),
+                    AppEvent::Quit => self.quit().await,
                     AppEvent::Enter => self.handle_message().await,
                     AppEvent::Response(response) => self.handle_response(response).await,
                 },
@@ -109,8 +111,6 @@ impl<'a> App<'a> {
     // sendet AppEvents
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
-        // TODO custom keymaps
-
         if key_event.modifiers == KeyModifiers::SHIFT {
             match key_event.code {
                 KeyCode::Left | KeyCode::Right => {
@@ -140,6 +140,12 @@ impl<'a> App<'a> {
                 self.vertical_scroll_state =
                     self.vertical_scroll_state.position(self.vertical_scroll);
             }
+            KeyCode::Char('<') => {
+                self.next_tab();
+            }
+            KeyCode::Char('>') => {
+                self.previous_tab();
+            }
             KeyCode::Enter => self.events.send(AppEvent::Enter),
             // Other handlers you could add here.
             _ => {
@@ -156,7 +162,23 @@ impl<'a> App<'a> {
     pub fn tick(&self) {}
 
     /// Set running to false to quit the application.
-    pub fn quit(&mut self) {
+    pub async fn quit(&mut self) {
+        let msg = self
+            .user_service
+            .chat_client
+            .create_message(
+                String::new(),
+                String::from("/quit"),
+                String::new(),
+                String::new(),
+            )
+            .await;
+        let _ = self
+            .user_service
+            .chat_client
+            .http_client
+            .delete_request(msg)
+            .await;
         self.running = false;
     }
 
@@ -204,6 +226,7 @@ impl<'a> App<'a> {
                 if rsp.content == UNREGISTER_FLAG {
                     self.switch_title(UNREGISTER_FLAG, [String::new(), String::new()]);
                 }
+                self.display_message(vec![Line::from(blue_span(DEFAULT_MESSAGE.to_string()))]);
                 Some(vec![Line::from(blue_span(rsp.content))])
             }
 
@@ -223,8 +246,17 @@ impl<'a> App<'a> {
 
             // add group output
             Response { rsp_name, .. } if rsp_name == ADD_GROUP_FLAG => {
-                // TODO HandleAddGroup method hinzufügen
-                let group_name = String::from("{insert group name}");
+                let group_name = match self
+                    .user_service
+                    .chat_client
+                    .handle_add_group(rsp.content)
+                    .await
+                {
+                    Ok(g) => g.name,
+                    Err(e) => {
+                        return Some(vec![Line::from(red_span(format!("{}: {}", e.kind, e.msg)))]);
+                    }
+                };
                 let client_name = self
                     .user_service
                     .chat_client
@@ -247,7 +279,7 @@ impl<'a> App<'a> {
 
             // leave group output
             Response { rsp_name, .. } if rsp_name == LEAVE_GROUP_FLAG => {
-                // TODO logic
+                *self.user_service.chat_client.group_id.lock().await = None;
                 let client_name = self
                     .user_service
                     .chat_client
@@ -347,5 +379,13 @@ impl<'a> App<'a> {
 
         let current = self.history.set_current_history_index(pending) as usize;
         self.history.inputs[current].clone()
+    }
+
+    pub fn next_tab(&mut self) {
+        self.selected_tab = self.selected_tab.next();
+    }
+
+    pub fn previous_tab(&mut self) {
+        self.selected_tab = self.selected_tab.previous();
     }
 }

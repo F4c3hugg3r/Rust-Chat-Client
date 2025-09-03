@@ -1,8 +1,13 @@
 use crate::UI::app::App;
+use crate::UI::tabs::tabs::SelectedTab;
+use Constraint::{Length, Min};
 use color_eyre::owo_colors::OwoColorize;
+use ratatui::prelude::Buffer;
+use ratatui::prelude::Rect;
 use ratatui::style::Modifier;
 use ratatui::text::Line;
 use ratatui::text::Span;
+use ratatui::widgets::Tabs;
 use ratatui::widgets::Wrap;
 use ratatui::{
     Frame,
@@ -10,60 +15,53 @@ use ratatui::{
     style::{Color, Style, Stylize},
     widgets::{Block, BorderType, Paragraph, Scrollbar, ScrollbarOrientation, Widget},
 };
+use strum::IntoEnumIterator;
 use tui_textarea::TextArea;
 
 /// Rendert die gesamte UI.
 /// Diese Funktion nimmt ein &mut App, damit das TextArea Widget mutiert werden kann.
 pub fn render_ui(app: &mut App, frame: &mut Frame) {
     let area = frame.area();
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(5)])
-        .split(area);
+    let vertical = Layout::vertical([Length(1), Min(0)]);
+    let [header_area, inner_area] = vertical.areas(area);
 
-    app.chat_size = chunks[0].as_size();
+    let horizontal = Layout::horizontal(Constraint::from_percentages([70, 30]));
+    let [tabs_area, title_area] = horizontal.areas(header_area);
 
-    let style = Style::new().fg(Color::Cyan).bg(Color::Black);
-
-    // Nachrichtenbereich (oben)
-    let message_block = Block::bordered()
-        .title(format!(" {} ", app.title.clone()))
-        .title_alignment(Alignment::Center)
-        .border_type(BorderType::Rounded)
-        .border_style(style);
-
-    let message_field = Paragraph::new(app.messages.lines.clone())
-        .block(message_block)
-        .bg(Color::Black)
-        .scroll((app.vertical_scroll as u16, 0))
-        .wrap(Wrap { trim: true });
-
-    frame.render_widget(message_field, chunks[0]);
-
-    // Scrollbar
-    app.vertical_scroll_state = app
-        .vertical_scroll_state
-        .content_length(app.messages.lines.len());
-    frame.render_stateful_widget(
-        Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(Some("↑"))
-            .end_symbol(Some("↓")),
-        chunks[0],
-        &mut app.vertical_scroll_state,
-    );
-
-    // Eingabebereich (unten)
-    let input_block = Block::bordered()
-        .title("Send [Shift Enter] | Previous Input [Shift ←] | Last Input [Shift →]")
-        .title_alignment(Alignment::Right)
-        .border_type(BorderType::Rounded)
-        .border_style(style);
-
-    app.text_input.set_cursor_line_style(Style::default());
-    app.text_input.set_block(input_block);
-    app.text_input.set_style(Style::new().bg(Color::Black));
-    app.text_input.render(chunks[1], frame.buffer_mut());
+    {
+        let buf = frame.buffer_mut();
+        render_title(title_area, buf);
+        render_tabs(app, tabs_area, buf);
+        // render_footer(footer_area, buf);
+    }
+    app.selected_tab.render(app, frame, inner_area);
 }
+
+fn render_tabs(app: &mut App, area: Rect, buf: &mut Buffer) {
+    let titles = SelectedTab::iter().map(SelectedTab::title);
+    let highlight_style = Style::default()
+        .fg(app.selected_tab.palette().fg)
+        .bg(app.selected_tab.palette().bg);
+    let selected_tab_index = app.selected_tab as usize;
+    Tabs::new(titles)
+        .highlight_style(highlight_style)
+        .select(selected_tab_index)
+        .padding("", "")
+        .divider(" ")
+        .render(area, buf);
+}
+
+fn render_title(area: Rect, buf: &mut Buffer) {
+    Paragraph::new(Line::from("change tab with [Shift <] | [Shift >] ").dim())
+        .alignment(Alignment::Right)
+        .render(area, buf);
+}
+
+// fn render_footer(area: Rect, buf: &mut Buffer) {
+//     Line::raw("◄ ► to change tab | Press q to quit")
+//         .centered()
+//         .render(area, buf);
+// }
 
 // Einfache Farbstile
 pub fn red_span(text: String) -> Span<'static> {

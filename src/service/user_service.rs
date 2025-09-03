@@ -1,7 +1,6 @@
 use crate::chat::chat_client::{self, ChatClient};
 use crate::helper;
 use crate::plugins::plugin_registry::{self, PluginRegistry};
-use crate::types;
 use crate::types::{Message, Response};
 use std::fmt::format;
 use std::sync::Arc;
@@ -46,7 +45,7 @@ impl UserService {
             }
         };
 
-        // TODO implement Logoutput channel to handle sending error
+        // TODO log channel
         let _ = chat_client
             .output
             .send(Response {
@@ -58,5 +57,3 @@ impl UserService {
             .await;
     }
 }
-
-// TODO Interrupt

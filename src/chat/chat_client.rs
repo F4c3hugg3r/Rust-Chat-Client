@@ -1,6 +1,6 @@
 use crate::helper;
 use crate::network::http_client::HttpClient;
-use crate::types;
+use crate::types::{self, ChatErrorWithMsg, JsonGroup};
 use crate::types::{Message, Response};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ pub struct ChatClient {
     pub client_name: Arc<Mutex<String>>,
     pub client_id: Arc<Mutex<String>>,
     pub auth_token: Arc<Mutex<String>>,
-    // group_id: String,
+    pub group_id: Arc<Mutex<Option<String>>>,
     pub registered: Arc<Mutex<bool>>,
     pub output: Sender<Response>,
     pub http_client: HttpClient,
@@ -37,9 +37,9 @@ impl ChatClient {
         let client_id = Arc::new(Mutex::new(helper::generate_secure_token(32)));
         let auth_token = Arc::new(Mutex::new(String::from("")));
         Self {
-            // TODO auch client_id setzen bei Registrierung
             client_id: client_id.clone(),
-            client_name: Arc::new(Mutex::new(String::from(""))),
+            client_name: Arc::new(Mutex::new(String::new())),
+            group_id: Arc::new(Mutex::new(None)),
             auth_token: auth_token.clone(),
             registered: Arc::new(Mutex::new(false)),
             output: tx,
@@ -63,12 +63,12 @@ impl ChatClient {
     pub async fn unregister(&self) {
         let mut client_name = self.client_name.lock().await;
         let mut auth_token = self.auth_token.lock().await;
-        let mut client_id = self.client_id.lock().await;
         let mut registered = self.registered.lock().await;
+        let mut group_id = self.group_id.lock().await;
 
+        *group_id = None;
         *client_name = String::from("");
         *auth_token = String::from("");
-        *client_id = String::from("");
         *registered = false;
     }
 
@@ -82,5 +82,24 @@ impl ChatClient {
             }
             self.notify.notified().await;
         }
+    }
+
+    pub async fn handle_add_group(
+        &self,
+        group_json: String,
+    ) -> Result<JsonGroup, ChatErrorWithMsg> {
+        let group: JsonGroup = match serde_json::from_str(group_json.as_str()) {
+            Ok(g) => g,
+            Err(e) => {
+                return Err(ChatErrorWithMsg::new(
+                    types::ChatError::WrongInput,
+                    e.to_string(),
+                ));
+            }
+        };
+
+        let _ = self.group_id.lock().await.insert(group.group_id.clone());
+
+        Ok(group)
     }
 }

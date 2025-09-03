@@ -54,7 +54,8 @@ pub enum HttpClientError {
     InvalidEndpoint,
 }
 
-pub const DEFAULT_TITLE: &str = "Willkommen im Chatraum! - Schreibe '/register {name}' und '/help'";
+pub const DEFAULT_TITLE: &str = "Willkommen im Chatraum!";
+pub const DEFAULT_MESSAGE: &str = "-> Schreibe '/register {name}' um dich zu registrieren";
 pub const WINDOW_RESIZE_FLAG: &str = "windowResize";
 pub const REGISTER_OUTPUT: &str = "-> Du kannst nun Nachrichten schreiben oder Commands ausführen";
 pub const REGISTER_HELP_OUTPUT: &str = "[ '/help' → Befehle anzeigen ]";
@@ -167,10 +168,10 @@ pub struct JsonClient {
     pub group_id: String,
 }
 
-// signals, that a state of a client or the list of clients has changed
-#[derive(Debug, Clone)]
-pub struct ClientsChangeSignal {
-    pub clients_json: String,
-    pub call_state: String,
-    pub opp_id: String,
-}
+// // signals, that a state of a client or the list of clients has changed
+// #[derive(Debug, Clone)]
+// pub struct ClientsChangeSignal {
+//     pub clients_json: String,
+//     pub call_state: String,
+//     pub opp_id: String,
+// }
