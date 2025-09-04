@@ -21,8 +21,8 @@ pub enum SelectedTab {
     Users = 1,
     #[strum(to_string = "Help")]
     Help = 2,
-    #[strum(to_string = "Tab 4")]
-    Tab4 = 3,
+    // #[strum(to_string = "Tab 4")]
+    // Tab4 = 3,
 }
 
 impl SelectedTab {
@@ -32,7 +32,7 @@ impl SelectedTab {
             Self::Chat => self.render_tab0(app, frame, area),
             Self::Users => self.render_tab1(app, frame, area),
             Self::Help => self.render_tab2(app, frame, area),
-            Self::Tab4 => self.render_tab3(app, frame, area),
+            // Self::Tab4 => self.render_tab3(app, frame, area),
         }
     }
     /// Get the previous tab, if there is no previous tab return the current tab.
@@ -74,11 +74,11 @@ impl SelectedTab {
                 bg: Color::Black,
                 border: BLUE_COLOR,
             },
-            Self::Tab4 => Palette {
-                fg: Color::Indexed(63), // purple
-                bg: Color::Black,
-                border: Color::Indexed(63),
-            },
+            // Self::Tab4 => Palette {
+            //     fg: Color::Indexed(63), // purple
+            //     bg: Color::Black,
+            //     border: Color::Indexed(63),
+            // },
             Self::Chat => Palette {
                 fg: TURKIS_COLOR, // turkis
                 bg: Color::Black,

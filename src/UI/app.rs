@@ -364,6 +364,9 @@ impl<'a> App<'a> {
 
             // response output
             _ => {
+                if rsp.content.starts_with("[") {
+                    return None;
+                }
                 let result = vec![Line::from(vec![
                     turkis_span(rsp.rsp_name),
                     Span::from(": "),

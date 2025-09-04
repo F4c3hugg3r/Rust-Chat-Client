@@ -19,10 +19,6 @@ pub struct ChatClient {
     pub http_client: HttpClient,
     // pub current_calling: String,
     notify: Notify,
-    // TODO channel für output und tx (sender) könne mehrere sein / rx (receiver) (gibt nur einen receiver)
-    //  channel wird außerhalb initialisiert: überlegen wie am besten
-    // pub output: mpsc::Sender<types::Response>
-
     // LogChan                chan t.Log
     // ClientChangeSignalChan chan t.ClientsChangeSignal
     // CallTimeoutChan        chan bool
