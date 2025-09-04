@@ -91,7 +91,8 @@ pub const UNREGISTER_FLAG: &str = "- Du bist nun vom Server getrennt -";
 pub const REGISTER_FLAG: &str = "- Du bist registriert -";
 pub const ADD_GROUP_FLAG: &str = "Add Group";
 pub const LEAVE_GROUP_FLAG: &str = "Leave Group";
-
+pub const HELP_FLAG: &str = "Help";
+pub const GROUP_HELP_FLAG: &str = "Group Help";
 pub const USERS_FLAG: &str = "Users";
 pub const IGNORE_RESPONSE_TAG: &str = "Ignore Response";
 pub const USER_ADD_FLAG: &str = "Add User";

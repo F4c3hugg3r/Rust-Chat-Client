@@ -8,7 +8,7 @@ use ratatui::{style::Color, text::Line, widgets::Paragraph};
 use strum_macros::{Display, EnumIter, FromRepr};
 
 use crate::UI::app::App;
-use crate::UI::tabs::{chat, users};
+use crate::UI::tabs::{chat, help, users};
 use crate::types::BLUE_COLOR;
 use crate::types::TURKIS_COLOR;
 
@@ -61,7 +61,9 @@ impl SelectedTab {
         users::UsersTable::render_users_tab(app, frame, area);
     }
 
-    fn render_tab2(self, app: &mut App, frame: &mut Frame, area: Rect) {}
+    fn render_tab2(self, app: &mut App, frame: &mut Frame, area: Rect) {
+        help::HelpTable::render_help_tab(app, frame, area);
+    }
 
     fn render_tab3(self, app: &mut App, frame: &mut Frame, area: Rect) {}
 

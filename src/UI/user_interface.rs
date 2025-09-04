@@ -20,6 +20,7 @@ use ratatui::{
 use strum::IntoEnumIterator;
 use tui_textarea::TextArea;
 
+// FIXME header layout
 /// Rendert die gesamte UI.
 /// Diese Funktion nimmt ein &mut App, damit das TextArea Widget mutiert werden kann.
 pub fn render_ui(app: &mut App, frame: &mut Frame) {

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::UI::tabs::help::{HelpItem, HelpTable};
 use crate::UI::tabs::tabs::SelectedTab;
 use crate::UI::tabs::users::UsersTable;
 use crate::service::user_service::UserService;
@@ -45,6 +46,7 @@ pub struct App<'a> {
     pub history: InputHistory,
     pub selected_tab: SelectedTab,
     pub users_table: UsersTable,
+    pub help_table: HelpTable,
 }
 
 // TODO webrtc?
@@ -68,6 +70,7 @@ impl<'a> App<'a> {
             },
             selected_tab: SelectedTab::Chat,
             users_table: UsersTable::new(),
+            help_table: HelpTable::new(),
         };
 
         tokio::spawn(async move {
@@ -118,10 +121,12 @@ impl<'a> App<'a> {
             KeyCode::Char('<') => {
                 self.next_tab();
                 self.update_users_tab().await;
+                self.update_help_tab().await;
             }
             KeyCode::Char('>') => {
                 self.previous_tab();
                 self.update_users_tab().await;
+                self.update_help_tab().await;
             }
             KeyCode::Esc => self.events.send(AppEvent::Quit),
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
@@ -153,6 +158,11 @@ impl<'a> App<'a> {
                         _ => {
                             self.text_input.input(key_event);
                         }
+                    },
+                    SelectedTab::Help => match key_event.code {
+                        KeyCode::Up => self.help_table.previous_row(),
+                        KeyCode::Down => self.help_table.next_row(),
+                        _ => {}
                     },
                     SelectedTab::Chat => {
                         if key_event.modifiers == KeyModifiers::SHIFT {
@@ -225,7 +235,6 @@ impl<'a> App<'a> {
         }
     }
 
-    // TODO vec lines returnen, damit multi line output möglich ist
     pub async fn evaluate_response(&mut self, rsp: Response) -> Option<Vec<Line<'static>>> {
         match rsp {
             // error output
@@ -261,12 +270,13 @@ impl<'a> App<'a> {
                 // unregister output
                 if rsp.content == UNREGISTER_FLAG {
                     self.switch_title(UNREGISTER_FLAG, [String::new(), String::new()]);
+                    self.display_message(vec![Line::from(blue_span(DEFAULT_MESSAGE.to_string()))]);
+                    self.users_table.update_items(
+                        vec![],
+                        self.user_service.chat_client.own_json_client().await,
+                    );
                 }
-                self.display_message(vec![Line::from(blue_span(DEFAULT_MESSAGE.to_string()))]);
-                self.users_table.update_items(
-                    vec![],
-                    self.user_service.chat_client.own_json_client().await,
-                );
+
                 Some(vec![Line::from(blue_span(rsp.content))])
             }
 
@@ -340,6 +350,14 @@ impl<'a> App<'a> {
                 let users: Vec<JsonClient> = serde_json::from_str(&rsp.content).unwrap_or_default();
                 self.users_table
                     .update_items(users, self.user_service.chat_client.own_json_client().await);
+
+                None
+            }
+
+            // help output
+            Response { rsp_name, .. } if rsp_name == HELP_FLAG || rsp_name == GROUP_HELP_FLAG => {
+                let items: Vec<HelpItem> = serde_json::from_str(&rsp.content).unwrap_or_default();
+                self.help_table.push_items(items, &rsp_name);
 
                 None
             }
@@ -453,5 +471,19 @@ impl<'a> App<'a> {
                 user_service.executor(command).await;
             });
         }
+    }
+
+    pub async fn update_help_tab(&self) {
+        if self.help_table.filled() || !*self.user_service.chat_client.registered.lock().await {
+            return;
+        }
+        let user_service = self.user_service.clone();
+        tokio::spawn(async move {
+            user_service.executor("/group help").await;
+        });
+        let user_service = self.user_service.clone();
+        tokio::spawn(async move {
+            user_service.executor("/help").await;
+        });
     }
 }

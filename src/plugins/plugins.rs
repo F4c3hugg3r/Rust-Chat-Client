@@ -48,7 +48,7 @@ impl PluginTrait for PrivateMessagePlugin {
             .http_client
             .post_message(Endpoint::PostPlugin, message)
             .await?;
-        return Ok(rsp.err);
+        return Ok(String::new());
     }
 }
 
@@ -122,11 +122,11 @@ impl ForwardPlugin {
 #[async_trait]
 impl PluginTrait for ForwardPlugin {
     async fn execute(&self, msg: Message) -> Result<String, ChatErrorWithMsg> {
-        let rsp: Response = self
+        let _ = self
             .chat_client
             .http_client
             .post_message(Endpoint::PostPlugin, msg)
             .await?;
-        return Ok(rsp.err);
+        return Ok(String::new());
     }
 }
