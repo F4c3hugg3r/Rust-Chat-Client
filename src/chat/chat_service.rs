@@ -19,6 +19,10 @@ impl ChatClient {
     ) -> Message {
         let client_name = self.client_name.lock().await.clone();
         let client_client_id = self.client_id.lock().await.clone();
+        let client_group_id = match self.group.lock().await.clone() {
+            Some(json_group) => json_group.group_id.clone(),
+            None => String::new(),
+        };
 
         let msg_name = if name.is_empty() && *self.registered.lock().await {
             client_name
@@ -37,6 +41,7 @@ impl ChatClient {
             content,
             plugin,
             client_id: msg_client_id,
+            group_id: client_group_id,
         }
     }
 
@@ -48,7 +53,7 @@ impl ChatClient {
                 Ok(rsp) => {
                     let _ = self.output.send(rsp).await;
                 }
-                Err(err) => {
+                Err(_) => {
                     // TODO log channel
                     // let _ = self.output.send(Response::error(err.to_string())).await;
                 }

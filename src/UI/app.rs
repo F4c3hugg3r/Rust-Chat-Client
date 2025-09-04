@@ -47,10 +47,6 @@ pub struct App<'a> {
     pub users_table: UsersTable,
 }
 
-// FIXME es wird immer /user verschickt -> nur beim wechseln
-// TODO default für group bei jsonClient setzen oder bei mir selbst anpassen
-// TODO aktualisiertaste für /users bzw /group users taste im users tab
-// TODO user Tabelle bei Aufruf & registrierung aktualisieren bzw bei unregister zurücksetzen
 // TODO webrtc?
 impl<'a> App<'a> {
     /// Constructs a new instance of [`App`].
@@ -121,9 +117,11 @@ impl<'a> App<'a> {
         match key_event.code {
             KeyCode::Char('<') => {
                 self.next_tab();
+                self.update_users_tab().await;
             }
             KeyCode::Char('>') => {
                 self.previous_tab();
+                self.update_users_tab().await;
             }
             KeyCode::Esc => self.events.send(AppEvent::Quit),
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
@@ -134,6 +132,24 @@ impl<'a> App<'a> {
                     SelectedTab::Users => match key_event.code {
                         KeyCode::Up => self.users_table.previous_row(),
                         KeyCode::Down => self.users_table.next_row(),
+                        KeyCode::Char('u') => {
+                            if *self.user_service.chat_client.registered.lock().await {
+                                let user_service = self.user_service.clone();
+                                tokio::spawn(async move {
+                                    user_service.executor("/users").await;
+                                });
+                            }
+                        }
+                        KeyCode::Char('g') => {
+                            if *self.user_service.chat_client.registered.lock().await
+                                && self.user_service.chat_client.group.lock().await.is_some()
+                            {
+                                let user_service = self.user_service.clone();
+                                tokio::spawn(async move {
+                                    user_service.executor("/group users").await;
+                                });
+                            }
+                        }
                         _ => {
                             self.text_input.input(key_event);
                         }
@@ -170,12 +186,6 @@ impl<'a> App<'a> {
                     }
                     _ => {}
                 };
-            }
-        }
-        if matches!(self.selected_tab, SelectedTab::Users) {
-            match *self.user_service.chat_client.group.lock().await {
-                Some(_) => self.user_service.executor("/group users").await,
-                None => self.user_service.executor("/users").await,
             }
         }
         Ok(())
@@ -325,11 +335,9 @@ impl<'a> App<'a> {
                 ])
             }
 
-            // slice output
-            // TODO maybe als Tabs und Table
+            // users output
             Response { rsp_name, .. } if rsp_name == USERS_FLAG => {
                 let users: Vec<JsonClient> = serde_json::from_str(&rsp.content).unwrap_or_default();
-                //return Some(vec![Line::from(red_span(e.to_string()))])
                 self.users_table
                     .update_items(users, self.user_service.chat_client.own_json_client().await);
 
@@ -356,8 +364,12 @@ impl<'a> App<'a> {
 
     pub async fn handle_message(&mut self) {
         let input = self.text_input.lines().join("\n");
-        self.user_service.executor(input.as_str()).await;
-        self.history.save_input(input);
+        let input_clone = input.clone();
+        let user_service = self.user_service.clone();
+        tokio::spawn(async move {
+            user_service.executor(input.as_str()).await;
+        });
+        self.history.save_input(input_clone);
         self.text_input = TextArea::default();
         self.scroll();
     }
@@ -425,5 +437,21 @@ impl<'a> App<'a> {
 
     pub fn previous_tab(&mut self) {
         self.selected_tab = self.selected_tab.previous();
+    }
+
+    pub async fn update_users_tab(&self) {
+        if !*self.user_service.chat_client.registered.lock().await {
+            return;
+        }
+        if matches!(self.selected_tab, SelectedTab::Users) {
+            let command = match *self.user_service.chat_client.group.lock().await {
+                Some(_) => "/group users",
+                None => "/users",
+            };
+            let user_service = self.user_service.clone();
+            tokio::spawn(async move {
+                user_service.executor(command).await;
+            });
+        }
     }
 }

@@ -125,8 +125,8 @@ pub struct Message {
     pub plugin: String,
     #[serde(rename = "clientId")]
     pub client_id: String,
-    // #[serde(rename = "groupId")]
-    // pub group_id: String,
+    #[serde(rename = "groupId")]
+    pub group_id: String,
 }
 
 // Response contains the name and id of the sender, the response (content) itself

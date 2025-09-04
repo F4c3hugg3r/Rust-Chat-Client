@@ -34,10 +34,8 @@ const PALETTES: [tailwind::Palette; 4] = [
     tailwind::RED,
 ];
 
-const INFO_TEXT: [&str; 2] = [
-    "(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
-    "(Shift + →) next color | (Shift + ←) previous color",
-];
+const INFO_TEXT: [&str; 1] =
+    ["[↑] move up | [↓] move down | [u] refresh users | [g] only group users"];
 
 const ITEM_HEIGHT: usize = 4;
 
@@ -103,7 +101,12 @@ impl UsersTable {
         }
     }
 
-    pub fn update_items(&mut self, items: Vec<JsonClient>, own_client: JsonClient) {
+    pub fn update_items(&mut self, mut items: Vec<JsonClient>, own_client: JsonClient) {
+        for item in items.iter_mut() {
+            if item.group_name.is_empty() {
+                item.group_name = String::from("no group");
+            }
+        }
         self.items = items;
         self.items.push(own_client);
         self.longest_item_lens = constraint_len_calculator(&self.items);
